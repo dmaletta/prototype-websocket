@@ -25,11 +25,11 @@ const historyConfig: HistoryReducerConfig<State, Action, Selection, SelectionAct
 
 };
 
-const port = import.meta.env.PROD ? 80 : 3000;
+const websocket = import.meta.env.PROD ? 'ws://' + window.location.host : 'ws://localhost';
 
 const websocketConfig: WebsocketReducerConfig<Action, Selection, SelectionAction> = {
     createWebsocket: () => {
-        return new window.WebSocket('ws://localhost:'+port+'/multi-user-action');
+        return new window.WebSocket(websocket + '/multi-user-action');
     },
     selectionReducer: reduceSelection,
     isSelectionAction: isSelectionAction
