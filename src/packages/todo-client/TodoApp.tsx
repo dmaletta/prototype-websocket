@@ -14,20 +14,14 @@ import {
 import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
-    hasRedo,
-    hasUndo,
-    HistoryReducerConfig,
-    redo,
-    undo,
+    HistoryReducerConfig, HistoryToolbar,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketReducerConfig
 } from "../history-websocket-client";
 import {v4 as uuidv4} from "uuid";
-import {Button, ButtonToolbar, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
+import {Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
-import {faRotateLeft, faRotateRight} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {createWebsocket} from "../common-util";
 
 const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
@@ -144,27 +138,11 @@ export default function TodoApp() {
     return (
         <Container>
             <WebsocketClientList state={state}/>
-
             <Card>
                 <Card.Header>Todos</Card.Header>
                 <Card.Body>
-                    <ButtonToolbar className="mb-2">
-                        <Button disabled={!hasUndo(state)} className="me-2" onMouseDown={(e) => {
-                            e.preventDefault();
-                            undo(dispatch);
-                        }}><FontAwesomeIcon icon={faRotateLeft}/>
-                        </Button>
-                        <Button disabled={!hasRedo(state)} onMouseDown={(e) => {
-                            e.preventDefault();
-                            {
-                                redo(dispatch);
-                            }
-                        }}><FontAwesomeIcon icon={faRotateRight}/>
-                        </Button>
-                    </ButtonToolbar>
-
+                    <HistoryToolbar state={state} dispatch={dispatch}/>
                     <hr/>
-
                     <TodoAdd dispatch={dispatch}/>
                     <ListGroup variant="flush" className="mt-3">
                         {state.ids.map(id => {

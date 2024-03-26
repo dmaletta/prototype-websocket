@@ -17,27 +17,23 @@ import {
 import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
-    hasRedo,
-    hasUndo,
-    HistoryReducerConfig,
-    redo,
-    undo,
+    HistoryReducerConfig, HistoryToolbar,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketReducerConfig
 } from "../history-websocket-client";
-import reducerTextElement from "../text-element-shared/reduceTextElement.ts";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faRotateLeft, faRotateRight} from "@fortawesome/free-solid-svg-icons";
-import {Alert, Button, ButtonToolbar, Card, CardBody, Container} from "react-bootstrap";
+import {reduceTextElement} from "../text-element-shared";
+import {Alert, Card, CardBody, Container} from "react-bootstrap";
+import {v4 as uuid} from 'uuid';
 
 const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: TextElementState }) => {
     const editor = useMemo(() => withReact(createEditor()), []);
+    const editorId = useMemo(() => uuid(),[]);
     const ref = useRef(false);
     const refOperations = useRef<(TextOperation | NodeOperation)[]>([]);
 
-    const {lastUpdater} = state;
-    if (lastUpdater !== 'editor') {
+    const {lastUpdated} = state;
+    if (editorId !== lastUpdated) {
         ref.current = true;
         const {nodes} = state;
         resetNodes(editor, nodes);
@@ -46,7 +42,7 @@ const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: 
     const flush = useDebounce(() => {
         const operations = refOperations.current;
         refOperations.current = [];
-        dispatch({type: 'operation', byEditor: true, operations});
+        dispatch({type: 'operation', editorId, operations});
     }, 300);
 
     return useMemo(() => (
@@ -79,7 +75,7 @@ const websocketConfig: WebsocketReducerConfig<TextElementAction, TextElementSele
 }
 
 
-const reducer = createHistoryWebsocketReducer<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction>(reducerTextElement, {
+const reducer = createHistoryWebsocketReducer<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction>(reduceTextElement, {
     history: historyConfig,
     websocket: websocketConfig
 });
@@ -105,20 +101,7 @@ export default function TextElementApp() {
             <WebsocketClientList state={state}/>
             <Alert className="mt-2">{state.nodes[0].children[0].text}</Alert>
 
-            <ButtonToolbar className="mb-2">
-                <Button className="me-2" disabled={!hasUndo(state)} onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    undo(dispatch);
-                }}><FontAwesomeIcon icon={faRotateLeft}/>
-                </Button>
-                <Button disabled={!hasRedo(state)} onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    redo(dispatch)
-                }}><FontAwesomeIcon icon={faRotateRight}/>
-                </Button>
-            </ButtonToolbar>
+            <HistoryToolbar state={state} dispatch={dispatch}/>
             <Card>
                 <CardBody>
                     <Rte dispatch={dispatch} state={state}/>

@@ -24,20 +24,20 @@ declare module 'slate' {
 export type TextElementSelection = Selection;
 
 export type TextElementState = {
-    lastUpdater: 'editor' | 'extern'
+    lastUpdated?: string
     nodes: CustomElement[]
 };
 
 export type TextElementAction = {
     type: 'operation',
     operations: (NodeOperation | TextOperation)[],
-    byEditor?: true
+    editorId?: string
 }
 
 export type TextSelectionAction = {
     type: 'select',
     operations: SelectionOperation[],
-    byEditor?: true
+    editorId?: string
 };
 
 export function createTextElementSelection(): TextElementSelection {
@@ -46,7 +46,6 @@ export function createTextElementSelection(): TextElementSelection {
 
 export function createTextElementState(): TextElementState {
     return {
-        lastUpdater: 'extern',
         nodes: [{
             type: 'paragraph',
             children: [{text: 'test'}],
@@ -90,7 +89,7 @@ export default function reduceTextElement(state: TextElementState, action: TextE
             Editor.normalize(editor);
 
             return {
-                lastUpdater: action.byEditor ? 'editor' : 'extern',
+                lastUpdated: action.editorId,
                 nodes: editor.children as CustomElement[],
             };
         }
