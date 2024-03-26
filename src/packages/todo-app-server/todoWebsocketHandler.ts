@@ -8,7 +8,7 @@ import {
     TodoSelection,
     todoSelectionReducer,
     TodoState
-} from "./../todo-shared";
+} from "./../todo-app-shared";
 
 export default createWebsocketHandler<TodoState, TodoAction, TodoSelection, SelectionAction>({
     reducer: todoReducer,

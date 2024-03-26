@@ -1,9 +1,9 @@
 import React, {ReactNode} from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
-import {TextElementApp} from "./packages/text-element-client";
+import {SlateApp} from "./packages/slate-app-client";
 import {createBrowserRouter, RouterProvider} from "react-router-dom";
-import {TodoApp} from "./packages/todo-client";
+import {TodoApp} from "./packages/todo-app-client";
 import {Container, Nav, Navbar} from "react-bootstrap";
 
 const router = createBrowserRouter([
@@ -12,17 +12,14 @@ const router = createBrowserRouter([
         element: (
             <Layout>
                 <h1>Prototype</h1>
-                <p>This application is designed to provide both Todo and Text Element functionality. Users can navigate
-                    between different components through the menu. The Todo functionality allows users to manage their
-                    daily tasks while the Text Element functionality allows users to manipulate text in various
-                    ways.</p>
+                <p>...</p>
             </Layout>
         ),
     },
     {
-        path: "/text-element",
+        path: "/slate",
         element: (
-            <Layout><TextElementApp/></Layout>
+            <Layout><SlateApp/></Layout>
         ),
     },
     {
@@ -39,12 +36,10 @@ function Layout({children}: { children: ReactNode }) {
         <>
             <Navbar expand="lg" className="bg-body-tertiary mb-3">
                 <Container>
-                    <Navbar.Brand href="/">Prototype</Navbar.Brand>
-                    <Navbar.Toggle aria-controls="basic-navbar-nav"/>
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
-                            <Nav.Link href="/text-element">Text Element</Nav.Link>
-                            <Nav.Link href="/todo">Todo</Nav.Link>
+                            <Nav.Link href="/slate">Slate App</Nav.Link>
+                            <Nav.Link href="/todo">Todo App</Nav.Link>
                         </Nav>
                     </Navbar.Collapse>
                 </Container>

@@ -1,7 +1,7 @@
 import {WebSocket} from "ws";
-import {v4 as uuidv4} from "uuid";
 import {Reducer} from "react";
 import {WebsocketMessage} from "../history-websocket-shared";
+import {generateUuid} from "../common-util";
 
 type HandlerConfig<State extends object, Action extends object, Selection, SelectionAction> = {
     reducer: Reducer<State, Action>,
@@ -68,7 +68,7 @@ export default function createWebsocketHandler<State extends object, Action exte
             })
         });
 
-        const clientId = uuidv4();
+        const clientId = generateUuid();
         broadcast({type: 'connected', clientId});
 
         clients.set(clientId, ws);

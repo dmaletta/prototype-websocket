@@ -5,4 +5,4 @@ export {default as createHistoryWebsocketReducer} from "./createHistoryWebsocket
 export * from "./createWebsocketReducer.ts";
 export {default as createWebsocketReducer} from "./createWebsocketReducer.ts";
 export {default as WebsocketClientList} from "./WebsocketClientList";
-export {default as HistoryToolbar} from "./HistoryToolbar";
+export {default as HistoryButtonGroup} from "./HistoryButtonGroup.tsx";

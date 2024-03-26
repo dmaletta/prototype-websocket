@@ -21,30 +21,30 @@ declare module 'slate' {
     }
 }
 
-export type TextElementSelection = Selection;
+export type SlateSelection = Selection;
 
-export type TextElementState = {
+export type SlateState = {
     lastUpdated?: string
     nodes: CustomElement[]
 };
 
-export type TextElementAction = {
+export type SlateAction = {
     type: 'operation',
     operations: (NodeOperation | TextOperation)[],
     editorId?: string
 }
 
-export type TextSelectionAction = {
+export type SlateSelectionAction = {
     type: 'select',
     operations: SelectionOperation[],
     editorId?: string
 };
 
-export function createTextElementSelection(): TextElementSelection {
+export function createSlateSelection(): SlateSelection {
     return null;
 }
 
-export function createTextElementState(): TextElementState {
+export function createSlateState(): SlateState {
     return {
         nodes: [{
             type: 'paragraph',
@@ -53,11 +53,11 @@ export function createTextElementState(): TextElementState {
     };
 }
 
-export function isTextElementSelectionAction(action: TextElementAction | TextSelectionAction): action is TextSelectionAction {
+export function isSlateSelectionAction(action: SlateAction | SlateSelectionAction): action is SlateSelectionAction {
     return action.type === 'select';
 }
 
-export function reduceTextElementSelection(state: TextElementSelection, action: TextSelectionAction): TextElementSelection {
+export function reduceSlateSelection(state: SlateSelection, action: SlateSelectionAction): SlateSelection {
     switch (action.type) {
         case 'select': {
             const editor = createEditor();
@@ -74,7 +74,7 @@ export function reduceTextElementSelection(state: TextElementSelection, action: 
     }
 }
 
-export default function reduceTextElement(state: TextElementState, action: TextElementAction): TextElementState {
+export default function reduceSlateState(state: SlateState, action: SlateAction): SlateState {
     switch (action.type) {
         case 'operation': {
             const editor = createEditor();
@@ -96,7 +96,7 @@ export default function reduceTextElement(state: TextElementState, action: TextE
     }
 }
 
-export function createRevertTextAction(_state: TextElementState, action: TextElementAction): TextElementAction {
+export function revertSlateAction(_state: SlateState, action: SlateAction): SlateAction {
     switch (action.type) {
         case "operation": {
             const operations = action.operations.map(operation => Operation.inverse(operation) as NodeOperation | TextOperation).reverse();

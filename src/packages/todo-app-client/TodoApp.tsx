@@ -10,19 +10,19 @@ import {
     TodoSelection,
     todoSelectionReducer,
     TodoState
-} from "../todo-shared";
+} from "../todo-app-shared";
 import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
-    HistoryReducerConfig, HistoryToolbar,
+    HistoryButtonGroup,
+    HistoryReducerConfig,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketReducerConfig
 } from "../history-websocket-client";
-import {v4 as uuidv4} from "uuid";
 import {Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
-import {createWebsocket} from "../common-util";
+import {createWebsocket, generateUuid} from "../common-util";
 
 const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
     createRevertAction: todoActionReverter,
@@ -32,7 +32,7 @@ const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, 
 
 const websocketConfig: WebsocketReducerConfig<TodoAction, TodoSelection, SelectionAction> = {
     createWebsocket: () => {
-        return createWebsocket('/websocket/todo');
+        return createWebsocket('/ws/todo');
     },
     selectionReducer: todoSelectionReducer,
     isSelectionAction: isTodoSelectionAction
@@ -100,13 +100,12 @@ function TodoView({dispatch, todo, selected, locked}: {
 function TodoAdd({dispatch}: { dispatch: Dispatch<TodoAction> }) {
     const [text, setText] = useState('');
 
-
     return (
         <InputGroup>
             <Form.Control value={text} onChange={(e => setText(e.target.value))}/>
             <Button variant="success" disabled={text === ''}
                     onClick={() => {
-                        dispatch({type: 'todo-add', todo: {id: uuidv4(), todo: text}, position: 0})
+                        dispatch({type: 'todo-add', todo: {id: generateUuid(), todo: text}, position: 0})
                         setText('');
                     }}>Add
             </Button>
@@ -137,24 +136,24 @@ export default function TodoApp() {
 
     return (
         <Container>
-            <WebsocketClientList state={state}/>
+            <WebsocketClientList className="mb-2" state={state}/>
             <Card>
-                <Card.Header>Todos</Card.Header>
-                <Card.Body>
-                    <HistoryToolbar state={state} dispatch={dispatch}/>
-                    <hr/>
-                    <TodoAdd dispatch={dispatch}/>
-                    <ListGroup variant="flush" className="mt-3">
-                        {state.ids.map(id => {
-                            const locked = isLocked(id);
-                            return <ListGroup.Item disabled={locked} active={state['@selection'] === id}
-                                                   key={id}><TodoView dispatch={dispatch}
-                                                                      selected={state['@selection'] === id}
-                                                                      locked={locked}
-                                                                      todo={state.map[id]}/></ListGroup.Item>
-                        })}
-                    </ListGroup>
-                </Card.Body>
+                <Card.Header>
+                    <HistoryButtonGroup className="mb-2" state={state} dispatch={dispatch}/>
+                </Card.Header>
+                <ListGroup variant="flush">
+                    <ListGroup.Item>
+                        <TodoAdd dispatch={dispatch}/>
+                    </ListGroup.Item>
+                    {state.ids.map(id => {
+                        const locked = isLocked(id);
+                        return <ListGroup.Item disabled={locked} active={state['@selection'] === id}
+                                               key={id}><TodoView dispatch={dispatch}
+                                                                  selected={state['@selection'] === id}
+                                                                  locked={locked}
+                                                                  todo={state.map[id]}/></ListGroup.Item>
+                    })}
+                </ListGroup>
             </Card>
         </Container>
     );

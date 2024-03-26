@@ -1,26 +1,24 @@
 import express from 'express'
 import expressWs from 'express-ws'
-import {todoWebsocketHandler} from "./packages/todo-server";
+import {todoWebsocketHandler} from "./packages/todo-app-server";
 import {fileURLToPath} from 'url';
 import path from 'path';
-import {textElementWebsocketHandler} from "./packages/text-element-server";
-
-const isProduction = process.env.NODE_ENV === 'production';
+import {slateWebsocketHandler} from "./packages/slate-app-server";
 
 const app = expressWs(express()).app;
 
-if (isProduction) {
+app.ws('/ws/todo', todoWebsocketHandler);
+app.ws('/ws/slate', slateWebsocketHandler);
+
+if (process.env.NODE_ENV === 'production') {
+    const filename = fileURLToPath(import.meta.url);
+    const dirname = path.dirname(filename);
+
     app.use(express.static('dist'));
+    app.get('*', (_req, res) => {
+        res.sendFile('index.html', {root: path.join(dirname, '../dist/')});
+    });
+    app.listen(80);
+} else {
+    app.listen(8080);
 }
-
-app.ws('/websocket/todo', todoWebsocketHandler);
-app.ws('/websocket/text-element', textElementWebsocketHandler);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.get('*', (_req, res) => {
-    res.sendFile('index.html', {root: path.join(__dirname, '../dist/')});
-});
-
-app.listen(isProduction ? 80 : 8080);

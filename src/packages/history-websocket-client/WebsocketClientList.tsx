@@ -1,19 +1,21 @@
-import {Card, ListGroup} from "react-bootstrap";
+import {Card, CardProps, ListGroup} from "react-bootstrap";
 import {WebsocketState} from "./createWebsocketReducer.ts";
 
-export default function WebsocketClientList<Action, Selection>({state}: { state: WebsocketState<Action, Selection> }) {
+type Props<Action, Selection> = {
+    state: WebsocketState<Action, Selection>
+} & CardProps
+
+export default function WebsocketClientList<Action, Selection>({state, ...props}: Props<Action, Selection>) {
     return (
-        <Card>
+        <Card {...props}>
             <Card.Header>Clients</Card.Header>
-            <Card.Body>
-                <ListGroup>
-                    {state['@websocket'].clientIds.map(clientId =>
-                        <ListGroup.Item
-                            style={clientId === state['@websocket'].clientId ? {color: 'green'} : undefined}
-                            key={clientId}>{clientId}</ListGroup.Item>
-                    )}
-                </ListGroup>
-            </Card.Body>
+            <ListGroup variant="flush">
+                {state['@websocket'].clientIds.map(clientId =>
+                    <ListGroup.Item
+                        style={clientId === state['@websocket'].clientId ? {color: 'green'} : undefined}
+                        key={clientId}>{clientId}</ListGroup.Item>
+                )}
+            </ListGroup>
         </Card>
     );
 }

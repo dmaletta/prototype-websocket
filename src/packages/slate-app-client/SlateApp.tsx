@@ -1,34 +1,34 @@
 import {Dispatch, useEffect, useMemo, useReducer, useRef} from "react";
 import {Editable, Slate, withReact} from "slate-react";
 import {createEditor, Editor, NodeOperation, Operation, TextOperation} from "slate";
-import {createWebsocket, useDebounce} from "../common-util";
+import {createWebsocket, generateUuid, useDebounce} from "../common-util";
 import {
-    createRevertTextAction,
-    createTextElementSelection,
-    createTextElementState,
+    createSlateSelection,
+    createSlateState,
     CustomElement,
-    isTextElementSelectionAction,
-    reduceTextElementSelection,
-    TextElementAction,
-    TextElementSelection,
-    TextElementState,
-    TextSelectionAction
-} from "../text-element-shared";
+    isSlateSelectionAction,
+    reduceSlateSelection,
+    reduceSlateState,
+    revertSlateAction,
+    SlateAction,
+    SlateSelection,
+    SlateSelectionAction,
+    SlateState
+} from "../slate-app-shared";
 import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
-    HistoryReducerConfig, HistoryToolbar,
+    HistoryButtonGroup,
+    HistoryReducerConfig,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketReducerConfig
 } from "../history-websocket-client";
-import {reduceTextElement} from "../text-element-shared";
-import {Alert, Card, CardBody, Container} from "react-bootstrap";
-import {v4 as uuid} from 'uuid';
+import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 
-const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: TextElementState }) => {
+const Rte = ({dispatch, state}: { dispatch: Dispatch<SlateAction>, state: SlateState }) => {
     const editor = useMemo(() => withReact(createEditor()), []);
-    const editorId = useMemo(() => uuid(),[]);
+    const editorId = useMemo(() => generateUuid(), []);
     const ref = useRef(false);
     const refOperations = useRef<(TextOperation | NodeOperation)[]>([]);
 
@@ -60,30 +60,30 @@ const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: 
     ), [editor, flush, state.nodes]);
 };
 
-const historyConfig: HistoryReducerConfig<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction> = {
-    createRevertAction: createRevertTextAction,
-    selectionReducer: reduceTextElementSelection,
-    isSelectionAction: isTextElementSelectionAction
+const historyConfig: HistoryReducerConfig<SlateState, SlateAction, SlateSelection, SlateSelectionAction> = {
+    createRevertAction: revertSlateAction,
+    selectionReducer: reduceSlateSelection,
+    isSelectionAction: isSlateSelectionAction
 };
 
-const websocketConfig: WebsocketReducerConfig<TextElementAction, TextElementSelection, TextSelectionAction> = {
+const websocketConfig: WebsocketReducerConfig<SlateAction, SlateSelection, SlateSelectionAction> = {
     createWebsocket: () => {
-        return createWebsocket('/websocket/text-element');
+        return createWebsocket('/ws/slate');
     },
-    selectionReducer: reduceTextElementSelection,
-    isSelectionAction: isTextElementSelectionAction,
+    selectionReducer: reduceSlateSelection,
+    isSelectionAction: isSlateSelectionAction,
 }
 
 
-const reducer = createHistoryWebsocketReducer<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction>(reduceTextElement, {
+const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
     history: historyConfig,
     websocket: websocketConfig
 });
 
-const initState = createHistoryWebsocketState<TextElementState, TextElementAction, TextElementSelection>(createTextElementState(), createTextElementSelection());
+const initState = createHistoryWebsocketState<SlateState, SlateAction, SlateSelection>(createSlateState(), createSlateSelection());
 
 
-export default function TextElementApp() {
+export default function SlateApp() {
     const [state, dispatch] = useReducer(reducer, initState);
 
     useEffect(() => {
@@ -97,16 +97,19 @@ export default function TextElementApp() {
     }
 
     return (
-        <Container className="mt-2">
-            <WebsocketClientList state={state}/>
-            <Alert className="mt-2">{state.nodes[0].children[0].text}</Alert>
-
-            <HistoryToolbar state={state} dispatch={dispatch}/>
+        <Container>
+            <WebsocketClientList className="mb-2" state={state}/>
             <Card>
-                <CardBody>
+                <Card.Header>
+                    <ButtonToolbar>
+                        <HistoryButtonGroup className="mt-2" state={state} dispatch={dispatch}/>
+                    </ButtonToolbar>
+                </Card.Header>
+                <Card.Body>
                     <Rte dispatch={dispatch} state={state}/>
-                </CardBody>
+                </Card.Body>
             </Card>
+            <Alert className="mt-2">{JSON.stringify(state.nodes)}</Alert>
         </Container>
     );
 }
