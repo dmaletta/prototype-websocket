@@ -100,14 +100,14 @@ export function useHistoryKeyPress<State, Action, Selection>(state: State & Hist
 }
 
 export type HistorySelectionConfig<State, Selection> = {
-    select:(state: State) => Selection,
+    select: (state: State) => Selection,
     update: (state: State, selection: Selection) => State
 };
 
 export type HistoryReducerConfig<State, Action, Selection, SelectionAction> = {
     createRevertAction: ActionReverter<State, Action>,
     selectionReducer: Reducer<Selection, SelectionAction>
-    isSelectionAction: (action: Action|SelectionAction) => action is SelectionAction
+    isSelectionAction: (action: Action | SelectionAction) => action is SelectionAction
 }
 
 
@@ -163,17 +163,17 @@ export default function createHistoryReducer<State, Action, Selection, Selection
                 '@selection': selectionReducer(selection, action)
             }
         } else {
-                const nextState = reducer(state, action);
-                const revertAction = createRevertAction(state, action);
+            const nextState = reducer(state, action);
+            const revertAction = createRevertAction(state, action);
 
-                return {
-                    ...nextState,
-                    '@selection': state['@selection'],
-                    '@history': {
-                        past: revertAction ? [...past, [revertAction, selection]] : past,
-                        future: revertAction ? [] : future,
-                    },
-                }
+            return {
+                ...nextState,
+                '@selection': state['@selection'],
+                '@history': {
+                    past: revertAction ? [...past, [revertAction, selection]] : past,
+                    future: revertAction ? [] : future,
+                },
             }
         }
     }
+}

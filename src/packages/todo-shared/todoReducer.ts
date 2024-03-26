@@ -4,21 +4,21 @@ export type TodoUpdateAction = { type: 'todo-update', id: string, todo: string }
 export type TodoSelectAction = { type: 'todo-select', todoId: string }
 export type ClearSelectAction = { type: 'clear-select' }
 
-export type Action = TodoAddAction | TodoRemoveAction | TodoUpdateAction
+export type TodoAction = TodoAddAction | TodoRemoveAction | TodoUpdateAction
 
-export type Selection = string|undefined
+export type TodoSelection = string | undefined
 export type SelectionAction = TodoSelectAction | ClearSelectAction;
 
 export type Todo = {
     id: string,
     todo: string
 }
-export type State = {
+export type TodoState = {
     ids: string[]
     map: { [key: string]: Todo }
 };
 
-export function createState(): State {
+export function createTodoState(): TodoState {
     return {
         ids: ['a', 'b', 'c'], map: {
             a: {
@@ -37,11 +37,12 @@ export function createState(): State {
     };
 }
 
-export function isSelectionAction(action: Action | SelectionAction): action is SelectionAction {
+export function isTodoSelectionAction(action: TodoAction | SelectionAction): action is SelectionAction {
     return ['todo-select', 'clear-select'].includes(action.type);
 }
 
-export function actionReverter(state: State, action: Action): Action | null {
+
+export function todoActionReverter(state: TodoState, action: TodoAction): TodoAction | null {
     switch (action.type) {
         case "todo-add":
             return {'type': "todo-remove", id: action.todo.id}
@@ -52,7 +53,7 @@ export function actionReverter(state: State, action: Action): Action | null {
     }
 }
 
-export function reduceSelection(_selection: Selection, action: SelectionAction): Selection {
+export function todoSelectionReducer(_selection: TodoSelection, action: SelectionAction): TodoSelection {
     switch (action.type) {
         case "clear-select":
             return undefined;
@@ -61,7 +62,7 @@ export function reduceSelection(_selection: Selection, action: SelectionAction):
     }
 }
 
-export default function reducer(state: State, action: Action): State {
+export default function todoReducer(state: TodoState, action: TodoAction): TodoState {
     switch (action.type) {
         case "todo-update": {
             const map = {...state.map, [action.id]: {...state.map[action.id], todo: action.todo}};
