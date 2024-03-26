@@ -25,7 +25,7 @@ const historyConfig: HistoryReducerConfig<State, Action, Selection, SelectionAct
 
 };
 
-const websocket = import.meta.env.PROD ? 'ws://' + window.location.host : 'ws://localhost';
+const websocket = import.meta.env.PROD ? 'wss://' + window.location.host : 'ws://localhost';
 
 const websocketConfig: WebsocketReducerConfig<Action, Selection, SelectionAction> = {
     createWebsocket: () => {
