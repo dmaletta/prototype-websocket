@@ -1,7 +1,7 @@
 import {WebSocket} from "ws";
 import {v4 as uuidv4} from "uuid";
 import {Reducer} from "react";
-import WebsocketMessage from "../history-websocket-shared";
+import {WebsocketMessage} from "../history-websocket-shared";
 
 type HandlerConfig<State extends object, Action extends object, Selection, SelectionAction> = {
     reducer: Reducer<State, Action>,
