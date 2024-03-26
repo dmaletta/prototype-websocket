@@ -8,15 +8,17 @@ import reducer, {
 } from "./reducer.ts";
 import {
     hasRedo,
-    hasUndo, HistoryReducerConfig,
+    hasUndo,
+    WebsocketReducerConfig,
+    HistoryReducerConfig,
     redo,
     undo,
-    useHistoryKeyPress
-} from "./lib/createHistoryReducer.ts";
+    useHistoryKeyPress,
+    createHistoryWebsocketReducer,
+    createHistoryWebsocketState
+} from "./packages/history-websocket-client";
 import "./index.css";
 import {v4 as uuidv4} from "uuid";
-import {WebsocketReducerConfig} from "./lib/createWebsocketReducer.ts";
-import createHistoryWebsocketReducer, {createHistoryWebsocketState} from "./lib/createHistoryWebsocketReducer.ts";
 
 const historyConfig: HistoryReducerConfig<State, Action, Selection, SelectionAction> = {
     createRevertAction: actionReverter,
@@ -25,7 +27,7 @@ const historyConfig: HistoryReducerConfig<State, Action, Selection, SelectionAct
 
 };
 
-const websocket = import.meta.env.PROD ? 'wss://' + window.location.host : 'ws://localhost';
+const websocket = import.meta.env.PROD ? 'wss://' + window.location.host : 'ws://localhost:8080';
 
 const websocketConfig: WebsocketReducerConfig<Action, Selection, SelectionAction> = {
     createWebsocket: () => {
@@ -81,7 +83,10 @@ function TodoView({dispatch, todo, selected, locked}: {
     }
 
     return (
-        <div style={selected ? {outline: '1px solid green'} : (locked ? {outline: '1px solid red'} : undefined)}>
+        <div style={selected ? {outline: '1px solid green'} : (locked ? {
+            outline: '1px solid red',
+            pointerEvents: 'none'
+        } : undefined)}>
             <textarea ref={refTextarea} onFocus={focus} onBlur={blur} value={todo.todo}
                       onChange={(e => dispatch({type: 'todo-update', id: todo.id, todo: e.target.value}))}/>
             <button onClick={() => dispatch({type: 'todo-remove', id: todo.id})}>Delete</button>

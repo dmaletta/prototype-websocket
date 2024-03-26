@@ -9,7 +9,7 @@ import reducer, {
     SelectionAction,
     reduceSelection
 } from "./reducer.ts";
-import createWebsocketHandler from "./lib/createWebsocketHandler.ts";
+import {createWebsocketHandler} from "./packages/history-websocket-server";
 
 const isProduction = process.env.NODE_ENV === 'production';
 
