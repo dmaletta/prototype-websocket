@@ -41,7 +41,6 @@ export function isTodoSelectionAction(action: TodoAction | SelectionAction): act
     return ['todo-select', 'clear-select'].includes(action.type);
 }
 
-
 export function todoActionReverter(state: TodoState, action: TodoAction): TodoAction | null {
     switch (action.type) {
         case "todo-add":

@@ -16,13 +16,17 @@ import {
     createHistoryWebsocketState,
     HistoryButtonGroup,
     HistoryReducerConfig,
+    isWebsocketConnected,
     useHistoryKeyPress,
     WebsocketClientList,
+    WebsocketConnectionAlert,
     WebsocketReducerConfig
 } from "../history-websocket-client";
 import {Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
 import {createWebsocket, generateUuid} from "../common-util";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faMinus, faPlus} from "@fortawesome/free-solid-svg-icons";
 
 const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
     createRevertAction: todoActionReverter,
@@ -91,8 +95,9 @@ function TodoView({dispatch, todo, selected, locked}: {
                                        id: todo.id,
                                        todo: e.target.value
                                    }))}/>
-            <Button disabled={locked} variant="danger"
-                    onClick={() => dispatch({type: 'todo-remove', id: todo.id})}>Delete</Button>
+            <Button disabled={locked} variant="danger" onClick={() => dispatch({type: 'todo-remove', id: todo.id})}>
+                <FontAwesomeIcon icon={faMinus}/>
+            </Button>
         </InputGroup>
     );
 }
@@ -100,15 +105,20 @@ function TodoView({dispatch, todo, selected, locked}: {
 function TodoAdd({dispatch}: { dispatch: Dispatch<TodoAction> }) {
     const [text, setText] = useState('');
 
+    const submit = () => {
+        dispatch({type: 'todo-add', todo: {id: generateUuid(), todo: text}, position: 0})
+        setText('');
+    }
+
     return (
         <InputGroup>
-            <Form.Control value={text} onChange={(e => setText(e.target.value))}/>
-            <Button variant="success" disabled={text === ''}
-                    onClick={() => {
-                        dispatch({type: 'todo-add', todo: {id: generateUuid(), todo: text}, position: 0})
-                        setText('');
-                    }}>Add
-            </Button>
+            <Form.Control onKeyDown={e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submit();
+                }
+            }} value={text} onChange={(e => setText(e.target.value))}/>
+            <Button variant="success" disabled={text === ''} onClick={submit}><FontAwesomeIcon icon={faPlus}/></Button>
         </InputGroup>
     );
 }
@@ -122,8 +132,8 @@ export default function TodoApp() {
 
     useHistoryKeyPress(state, dispatch);
 
-    if (!state['@websocket'].connected) {
-        return <div>not connected</div>
+    if (!isWebsocketConnected(state)) {
+        return <WebsocketConnectionAlert state={state}/>
     }
 
     const isLocked = (todoId: string) => {
@@ -139,7 +149,7 @@ export default function TodoApp() {
             <WebsocketClientList className="mb-2" state={state}/>
             <Card>
                 <Card.Header>
-                    <HistoryButtonGroup className="mb-2" state={state} dispatch={dispatch}/>
+                    <HistoryButtonGroup state={state} dispatch={dispatch}/>
                 </Card.Header>
                 <ListGroup variant="flush">
                     <ListGroup.Item>

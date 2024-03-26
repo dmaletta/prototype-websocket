@@ -6,3 +6,4 @@ export * from "./createWebsocketReducer.ts";
 export {default as createWebsocketReducer} from "./createWebsocketReducer.ts";
 export {default as WebsocketClientList} from "./WebsocketClientList";
 export {default as HistoryButtonGroup} from "./HistoryButtonGroup.tsx";
+export {default as WebsocketConnectionAlert} from "./WebsocketConnectionAlert.tsx";

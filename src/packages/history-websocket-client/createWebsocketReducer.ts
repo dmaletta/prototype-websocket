@@ -112,7 +112,6 @@ export default function createWebsocketReducer<State extends object, Action exte
         }
     }
 
-
     const websocketReducer = (
         state: State & WebsocketState<Action, Selection>,
         action: Action | WebsocketAction<State, Action, Selection, SelectionAction> | SelectionAction
@@ -218,7 +217,6 @@ export default function createWebsocketReducer<State extends object, Action exte
                 throw new Error('selection action must be an object');
             }
 
-
             const actionId = getObjectUuid(action as object);
             send(actionId, {type: 'selection', clientId, action, actionId: actionId});
 
@@ -244,5 +242,4 @@ export default function createWebsocketReducer<State extends object, Action exte
 
     return websocketReducer;
 }
-
 

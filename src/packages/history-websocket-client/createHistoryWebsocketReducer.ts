@@ -23,6 +23,10 @@ type HistoryWebsocketReducerConfig<State extends object, Action extends object, 
     websocket: WebsocketReducerConfig<Action, Selection, SelectionAction>
 }
 
+export function isWebsocketConnected<Action, Selection>(state: WebsocketState<Action, Selection>) {
+    return state['@websocket'].connected;
+}
+
 export default function createHistoryWebsocketReducer<State extends object, Action extends object, Selection, SelectionAction>
 (reducer: Reducer<State, Action>, config: HistoryWebsocketReducerConfig<State, Action, Selection, SelectionAction>) {
     const {history: historyConfig, websocket: websocketConfig} = config

@@ -20,8 +20,10 @@ import {
     createHistoryWebsocketState,
     HistoryButtonGroup,
     HistoryReducerConfig,
+    isWebsocketConnected,
     useHistoryKeyPress,
     WebsocketClientList,
+    WebsocketConnectionAlert,
     WebsocketReducerConfig
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
@@ -74,14 +76,12 @@ const websocketConfig: WebsocketReducerConfig<SlateAction, SlateSelection, Slate
     isSelectionAction: isSlateSelectionAction,
 }
 
-
 const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
     history: historyConfig,
     websocket: websocketConfig
 });
 
 const initState = createHistoryWebsocketState<SlateState, SlateAction, SlateSelection>(createSlateState(), createSlateSelection());
-
 
 export default function SlateApp() {
     const [state, dispatch] = useReducer(reducer, initState);
@@ -92,8 +92,8 @@ export default function SlateApp() {
 
     useHistoryKeyPress(state, dispatch);
 
-    if (!state['@websocket'].connected) {
-        return <Alert variant="danger">Not connected</Alert>
+    if (!isWebsocketConnected(state)) {
+        return <WebsocketConnectionAlert state={state}/>
     }
 
     return (
@@ -102,7 +102,7 @@ export default function SlateApp() {
             <Card>
                 <Card.Header>
                     <ButtonToolbar>
-                        <HistoryButtonGroup className="mt-2" state={state} dispatch={dispatch}/>
+                        <HistoryButtonGroup state={state} dispatch={dispatch}/>
                     </ButtonToolbar>
                 </Card.Header>
                 <Card.Body>
@@ -113,7 +113,6 @@ export default function SlateApp() {
         </Container>
     );
 }
-
 
 function resetNodes(editor: Editor, nodes: CustomElement[]): void {
     const children = [...editor.children];

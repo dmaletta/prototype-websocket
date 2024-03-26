@@ -81,7 +81,6 @@ export function useHistoryKeyPress<State, Action, Selection>(state: State & Hist
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [dispatch, hasPast]);
 
-
     useEffect(() => {
         if (!hasFuture) {
             return;
@@ -109,7 +108,6 @@ export type HistoryReducerConfig<State, Action, Selection, SelectionAction> = {
     selectionReducer: Reducer<Selection, SelectionAction>
     isSelectionAction: (action: Action | SelectionAction) => action is SelectionAction
 }
-
 
 export default function createHistoryReducer<State, Action, Selection, SelectionAction>(reducer: Reducer<State, Action>, config: HistoryReducerConfig<State, Action, Selection, SelectionAction>): Reducer<State & HistoryState<Action, Selection>, Action | HistoryAction | SelectionAction> {
     const {createRevertAction, selectionReducer, isSelectionAction} = config;

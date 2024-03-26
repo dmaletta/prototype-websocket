@@ -30,7 +30,6 @@ const router = createBrowserRouter([
     },
 ]);
 
-
 function Layout({children}: { children: ReactNode }) {
     return (
         <>
