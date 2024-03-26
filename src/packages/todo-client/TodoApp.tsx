@@ -25,6 +25,8 @@ import {
 import {v4 as uuidv4} from "uuid";
 import {Button, ButtonToolbar, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
+import {faRotateLeft, faRotateRight} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
     createRevertAction: todoActionReverter,
@@ -102,7 +104,7 @@ function TodoAdd({dispatch}: { dispatch: Dispatch<TodoAction> }) {
     return (
         <InputGroup>
             <Form.Control value={text} onChange={(e => setText(e.target.value))}/>
-            <Button disabled={text === ''}
+            <Button variant="success" disabled={text === ''}
                     onClick={() => {
                         dispatch({type: 'todo-add', todo: {id: uuidv4(), todo: text}, position: 0})
                         setText('');
@@ -117,7 +119,7 @@ export default function TodoApp() {
 
     useEffect(() => {
         return appReducer.connect(dispatch);
-    }, []);
+    }, [dispatch]);
 
     useHistoryKeyPress(state, dispatch);
 
@@ -147,36 +149,28 @@ export default function TodoApp() {
                     </ListGroup>
                 </Card.Body>
             </Card>
-            <ButtonToolbar className="mb-2">
-
-                <Button className="me-2" onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (hasUndo(state)) {
-                        undo(dispatch);
-                    }
-                }}>Undo
-                </Button>
-                <Button onMouseDown={(e) => {
-                    e.preventDefault();
-
-                    if (hasRedo(state)) {
-                        redo(dispatch);
-                    }
-                }}>Redo
-                </Button>
-            </ButtonToolbar>
-
-
-            <Card>
-                <Card.Header>Add Todo</Card.Header>
-                <Card.Body><TodoAdd dispatch={dispatch}/>
-                </Card.Body>
-            </Card>
 
             <Card>
                 <Card.Header>Todos</Card.Header>
                 <Card.Body>
-                    <ListGroup>
+                    <ButtonToolbar className="mb-2">
+                        <Button disabled={!hasUndo(state)} className="me-2" onMouseDown={(e) => {
+                            e.preventDefault();
+                            undo(dispatch);
+                        }}><FontAwesomeIcon icon={faRotateLeft}/>
+                        </Button>
+                        <Button disabled={!hasRedo(state)} onMouseDown={(e) => {
+                            e.preventDefault();{
+                                redo(dispatch);
+                            }
+                        }}><FontAwesomeIcon icon={faRotateRight}/>
+                        </Button>
+                    </ButtonToolbar>
+
+                    <hr/>
+
+                    <TodoAdd dispatch={dispatch}/>
+                    <ListGroup variant="flush" className="mt-3">
                         {state.ids.map(id => {
                             const locked = isLocked(id);
                             return <ListGroup.Item disabled={locked} active={state['@selection'] === id} key={id}><TodoView dispatch={dispatch}

@@ -43,8 +43,8 @@ function Layout({children}: { children: ReactNode }) {
                     <Navbar.Toggle aria-controls="basic-navbar-nav"/>
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
-                            <Nav.Link href="/text-element">Home</Nav.Link>
-                            <Nav.Link href="/todo">Link</Nav.Link>
+                            <Nav.Link href="/text-element">Text Element</Nav.Link>
+                            <Nav.Link href="/todo">Todo</Nav.Link>
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
