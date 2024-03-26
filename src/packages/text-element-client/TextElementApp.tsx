@@ -1,7 +1,7 @@
-import {Dispatch, useMemo, useReducer, useRef} from "react";
+import {Dispatch, useEffect, useMemo, useReducer, useRef} from "react";
 import {Editable, Slate, withReact} from "slate-react";
 import {createEditor, Editor, NodeOperation, Operation, TextOperation} from "slate";
-import {useDebounce} from "../common-util";
+import {createWebsocket, useDebounce} from "../common-util";
 import {
     createRevertTextAction,
     createTextElementSelection,
@@ -15,18 +15,21 @@ import {
     TextSelectionAction
 } from "../text-element-shared";
 import {
-    createHistoryReducer,
-    createHistoryState,
+    createHistoryWebsocketReducer,
+    createHistoryWebsocketState,
     hasRedo,
     hasUndo,
+    HistoryReducerConfig,
     redo,
     undo,
-    useHistoryKeyPress
+    useHistoryKeyPress,
+    WebsocketClientList,
+    WebsocketReducerConfig
 } from "../history-websocket-client";
 import reducerTextElement from "../text-element-shared/reduceTextElement.ts";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faRotateLeft, faRotateRight} from "@fortawesome/free-solid-svg-icons";
-import {Button, ButtonToolbar, Card, CardBody, Container} from "react-bootstrap";
+import {Alert, Button, ButtonToolbar, Card, CardBody, Container} from "react-bootstrap";
 
 const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: TextElementState }) => {
     const editor = useMemo(() => withReact(createEditor()), []);
@@ -61,22 +64,47 @@ const Rte = ({dispatch, state}: { dispatch: Dispatch<TextElementAction>, state: 
     ), [editor, flush, state.nodes]);
 };
 
-const reducer = createHistoryReducer<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction>(reducerTextElement, {
+const historyConfig: HistoryReducerConfig<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction> = {
     createRevertAction: createRevertTextAction,
     selectionReducer: reduceTextElementSelection,
     isSelectionAction: isTextElementSelectionAction
+};
+
+const websocketConfig: WebsocketReducerConfig<TextElementAction, TextElementSelection, TextSelectionAction> = {
+    createWebsocket: () => {
+        return createWebsocket('/websocket/text-element');
+    },
+    selectionReducer: reduceTextElementSelection,
+    isSelectionAction: isTextElementSelectionAction,
+}
+
+
+const reducer = createHistoryWebsocketReducer<TextElementState, TextElementAction, TextElementSelection, TextSelectionAction>(reducerTextElement, {
+    history: historyConfig,
+    websocket: websocketConfig
 });
 
-const initState = createHistoryState<TextElementState, TextElementAction, TextElementSelection>(createTextElementState(), createTextElementSelection());
+const initState = createHistoryWebsocketState<TextElementState, TextElementAction, TextElementSelection>(createTextElementState(), createTextElementSelection());
 
 
 export default function TextElementApp() {
     const [state, dispatch] = useReducer(reducer, initState);
 
+    useEffect(() => {
+        return reducer.connect(dispatch);
+    }, [dispatch]);
+
     useHistoryKeyPress(state, dispatch);
+
+    if (!state['@websocket'].connected) {
+        return <Alert variant="danger">Not connected</Alert>
+    }
 
     return (
         <Container className="mt-2">
+            <WebsocketClientList state={state}/>
+            <Alert className="mt-2">{state.nodes[0].children[0].text}</Alert>
+
             <ButtonToolbar className="mb-2">
                 <Button className="me-2" disabled={!hasUndo(state)} onClick={(e) => {
                     e.preventDefault();

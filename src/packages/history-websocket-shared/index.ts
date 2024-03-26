@@ -2,7 +2,7 @@ export type WebsocketInitMessage<State, Selection> = {
     type: 'init'
     clientId: string,
     clientIds: string[]
-    selections: {[clientId: string]: Selection|undefined}
+    selections: { [clientId: string]: Selection | undefined }
     state: State
 }
 

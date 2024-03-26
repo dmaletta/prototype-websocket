@@ -20,6 +20,7 @@ import {
     redo,
     undo,
     useHistoryKeyPress,
+    WebsocketClientList,
     WebsocketReducerConfig
 } from "../history-websocket-client";
 import {v4 as uuidv4} from "uuid";
@@ -27,6 +28,7 @@ import {Button, ButtonToolbar, Card, Container, Form, InputGroup, ListGroup} fro
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
 import {faRotateLeft, faRotateRight} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {createWebsocket} from "../common-util";
 
 const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
     createRevertAction: todoActionReverter,
@@ -34,11 +36,9 @@ const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, 
     isSelectionAction: isTodoSelectionAction
 };
 
-const websocket = import.meta.env.PROD ? 'wss://' + window.location.host : 'ws://localhost:8080';
-
 const websocketConfig: WebsocketReducerConfig<TodoAction, TodoSelection, SelectionAction> = {
     createWebsocket: () => {
-        return new window.WebSocket(websocket + '/websocket/todo');
+        return createWebsocket('/websocket/todo');
     },
     selectionReducer: todoSelectionReducer,
     isSelectionAction: isTodoSelectionAction
@@ -90,9 +90,15 @@ function TodoView({dispatch, todo, selected, locked}: {
 
     return (
         <InputGroup>
-            <Form.Control<"input"> type="text" ref={inputRef} disabled={locked} onFocus={focus} onBlur={blur} value={todo.todo}
-                      onChange={(e => dispatch({type: 'todo-update', id: todo.id, todo: e.target.value}))}/>
-            <Button disabled={locked} variant="danger" onClick={() => dispatch({type: 'todo-remove', id: todo.id})}>Delete</Button>
+            <Form.Control<"input"> type="text" ref={inputRef} disabled={locked} onFocus={focus} onBlur={blur}
+                                   value={todo.todo}
+                                   onChange={(e => dispatch({
+                                       type: 'todo-update',
+                                       id: todo.id,
+                                       todo: e.target.value
+                                   }))}/>
+            <Button disabled={locked} variant="danger"
+                    onClick={() => dispatch({type: 'todo-remove', id: todo.id})}>Delete</Button>
         </InputGroup>
     );
 }
@@ -137,18 +143,7 @@ export default function TodoApp() {
 
     return (
         <Container>
-            <Card className="mb-2">
-                <Card.Header>Clients</Card.Header>
-                <Card.Body>
-                    <ListGroup>
-                        {state['@websocket'].clientIds.map(clientId =>
-                            <ListGroup.Item
-                                style={clientId === state['@websocket'].clientId ? {color: 'green'} : undefined}
-                                key={clientId}>{clientId}</ListGroup.Item>
-                        )}
-                    </ListGroup>
-                </Card.Body>
-            </Card>
+            <WebsocketClientList state={state}/>
 
             <Card>
                 <Card.Header>Todos</Card.Header>
@@ -160,7 +155,8 @@ export default function TodoApp() {
                         }}><FontAwesomeIcon icon={faRotateLeft}/>
                         </Button>
                         <Button disabled={!hasRedo(state)} onMouseDown={(e) => {
-                            e.preventDefault();{
+                            e.preventDefault();
+                            {
                                 redo(dispatch);
                             }
                         }}><FontAwesomeIcon icon={faRotateRight}/>
@@ -173,7 +169,8 @@ export default function TodoApp() {
                     <ListGroup variant="flush" className="mt-3">
                         {state.ids.map(id => {
                             const locked = isLocked(id);
-                            return <ListGroup.Item disabled={locked} active={state['@selection'] === id} key={id}><TodoView dispatch={dispatch}
+                            return <ListGroup.Item disabled={locked} active={state['@selection'] === id}
+                                                   key={id}><TodoView dispatch={dispatch}
                                                                       selected={state['@selection'] === id}
                                                                       locked={locked}
                                                                       todo={state.map[id]}/></ListGroup.Item>

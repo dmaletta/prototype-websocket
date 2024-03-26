@@ -1,6 +1,6 @@
 import {Dispatch, Reducer} from "react";
 import {getObjectUuid} from "./../common-util";
-import {WebsocketMessage, WebsocketActionMessage} from "../history-websocket-shared";
+import {WebsocketActionMessage, WebsocketMessage} from "../history-websocket-shared";
 
 export type WebsocketMessageAction<State extends object, Action, Selection, SelectionAction> = {
     type: '@websocket/message',
@@ -54,7 +54,7 @@ export type WebsocketFactory = () => WebSocket;
 export type WebsocketReducerConfig<Action, Selection, SelectionAction> = {
     createWebsocket: WebsocketFactory
     selectionReducer: Reducer<Selection, SelectionAction>
-    isSelectionAction: (action: Action|SelectionAction) => action is SelectionAction
+    isSelectionAction: (action: Action | SelectionAction) => action is SelectionAction
 }
 
 export type Connector<State extends object, Action, Selection, SelectionAction> = (dispatch: Dispatch<Action | WebsocketAction<State, Action, Selection, SelectionAction>>) => void
@@ -148,7 +148,13 @@ export default function createWebsocketReducer<State extends object, Action exte
                     case "init":
                         return {
                             ...message.state,
-                            '@websocket': {...state['@websocket'], connected: true, clientId: message.clientId, clientIds: message.clientIds, selections: message.selections}
+                            '@websocket': {
+                                ...state['@websocket'],
+                                connected: true,
+                                clientId: message.clientId,
+                                clientIds: message.clientIds,
+                                selections: message.selections
+                            }
                         };
 
                     case "connected": {
@@ -189,7 +195,10 @@ export default function createWebsocketReducer<State extends object, Action exte
                             '@websocket': {
                                 ...state['@websocket'],
                                 clientIds: clientIds,
-                                selections: {...selections, [message.clientId]: selectionReducer(selections[message.clientId]!, message.action)}
+                                selections: {
+                                    ...selections,
+                                    [message.clientId]: selectionReducer(selections[message.clientId]!, message.action)
+                                }
                             }
                         }
                     }
@@ -200,7 +209,7 @@ export default function createWebsocketReducer<State extends object, Action exte
                     '@websocket': {...state['@websocket'], clientId: undefined, connected: false}
                 };
             }
-        } else if(isSelectionAction(action)) {
+        } else if (isSelectionAction(action)) {
             if (typeof clientId === 'undefined') {
                 throw new Error('Init connection missing');
             }

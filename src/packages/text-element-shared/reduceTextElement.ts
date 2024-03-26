@@ -1,4 +1,13 @@
-import {BaseEditor, createEditor, Editor, Operation, Selection, NodeOperation, TextOperation, SelectionOperation} from 'slate'
+import {
+    BaseEditor,
+    createEditor,
+    Editor,
+    NodeOperation,
+    Operation,
+    Selection,
+    SelectionOperation,
+    TextOperation
+} from 'slate'
 import {ReactEditor} from "slate-react";
 
 export type CustomElement = { type: 'paragraph'; children: CustomText[] }
@@ -21,7 +30,7 @@ export type TextElementState = {
 
 export type TextElementAction = {
     type: 'operation',
-    operations: (NodeOperation|TextOperation)[],
+    operations: (NodeOperation | TextOperation)[],
     byEditor?: true
 }
 
@@ -91,7 +100,7 @@ export default function reduceTextElement(state: TextElementState, action: TextE
 export function createRevertTextAction(_state: TextElementState, action: TextElementAction): TextElementAction {
     switch (action.type) {
         case "operation": {
-            const operations= action.operations.map(operation => Operation.inverse(operation) as NodeOperation|TextOperation).reverse();
+            const operations = action.operations.map(operation => Operation.inverse(operation) as NodeOperation | TextOperation).reverse();
 
             return {type: 'operation', operations};
         }

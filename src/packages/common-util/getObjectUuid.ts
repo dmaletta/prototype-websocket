@@ -1,4 +1,5 @@
 import {v4 as uuid} from "uuid";
+
 const idMap = new WeakMap<object, string>();
 export default function getObjectUuid(object: object): string {
     const objectId: string | undefined = idMap.get(object);

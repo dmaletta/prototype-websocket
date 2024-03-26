@@ -9,7 +9,8 @@ import createHistoryReducer, {
     ActionReverter,
     createHistoryState,
     HistoryReducerConfig,
-    HistoryState, isHistoryAction,
+    HistoryState,
+    isHistoryAction,
 } from "./createHistoryReducer.ts";
 import {Reducer} from "react";
 
