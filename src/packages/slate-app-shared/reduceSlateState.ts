@@ -1,5 +1,6 @@
 import {
     BaseEditor,
+    BaseOperation,
     createEditor,
     Editor,
     NodeOperation,
@@ -30,14 +31,13 @@ export type SlateState = {
 
 export type SlateAction = {
     type: 'operation',
-    operations: (NodeOperation | TextOperation)[],
+    operations: Exclude<BaseOperation, SelectionOperation>[],
     editorId?: string
 }
 
 export type SlateSelectionAction = {
     type: 'select',
-    operations: SelectionOperation[],
-    editorId?: string
+    selection: Selection
 };
 
 export function createSlateSelection(): SlateSelection {
@@ -57,19 +57,10 @@ export function isSlateSelectionAction(action: SlateAction | SlateSelectionActio
     return action.type === 'select';
 }
 
-export function reduceSlateSelection(state: SlateSelection, action: SlateSelectionAction): SlateSelection {
+export function reduceSlateSelection(_selection: SlateSelection, action: SlateSelectionAction): SlateSelection {
     switch (action.type) {
         case 'select': {
-            const editor = createEditor();
-
-            Editor.withoutNormalizing(editor, () => {
-                editor.selection = state;
-                action.operations.forEach(operation => {
-                    editor.apply(operation);
-                })
-            });
-
-            return editor.selection;
+            return action.selection;
         }
     }
 }

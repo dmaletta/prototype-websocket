@@ -1,4 +1,4 @@
-import {Card, CardProps, ListGroup} from "react-bootstrap";
+import {Alert, Card, CardProps, ListGroup} from "react-bootstrap";
 import {WebsocketState} from "./createWebsocketReducer.ts";
 
 type Props<Action, Selection> = {
@@ -13,7 +13,10 @@ export default function WebsocketClientList<Action, Selection>({state, ...props}
                 {state['@websocket'].clientIds.map(clientId =>
                     <ListGroup.Item
                         style={clientId === state['@websocket'].clientId ? {color: 'green'} : undefined}
-                        key={clientId}>{clientId}</ListGroup.Item>
+                        key={clientId}>
+                        {clientId}
+                        <Alert className="mt-2">{JSON.stringify(state['@websocket'].selections[clientId])}</Alert>
+                    </ListGroup.Item>
                 )}
             </ListGroup>
         </Card>

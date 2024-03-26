@@ -2,7 +2,7 @@ import React, {ReactNode} from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 import {SlateApp} from "./packages/slate-app-client";
-import {createBrowserRouter, RouterProvider} from "react-router-dom";
+import {createBrowserRouter, Link, RouterProvider} from "react-router-dom";
 import {TodoApp} from "./packages/todo-app-client";
 import {Container, Nav, Navbar} from "react-bootstrap";
 
@@ -37,8 +37,8 @@ function Layout({children}: { children: ReactNode }) {
                 <Container>
                     <Navbar.Collapse id="basic-navbar-nav">
                         <Nav className="me-auto">
-                            <Nav.Link href="/slate">Slate App</Nav.Link>
-                            <Nav.Link href="/todo">Todo App</Nav.Link>
+                            <Link to="/slate" className="nav-link">Slate App</Link>
+                            <Link to="/todo" className="nav-link">Todo App</Link>
                         </Nav>
                     </Navbar.Collapse>
                 </Container>

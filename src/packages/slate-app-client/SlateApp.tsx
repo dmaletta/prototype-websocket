@@ -1,6 +1,6 @@
-import {Dispatch, useEffect, useMemo, useReducer, useRef} from "react";
+import {Dispatch, ReducerAction, ReducerState, useEffect, useMemo, useReducer, useRef} from "react";
 import {Editable, Slate, withReact} from "slate-react";
-import {createEditor, Editor, NodeOperation, Operation, TextOperation} from "slate";
+import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation} from "slate";
 import {createWebsocket, generateUuid, useDebounce} from "../common-util";
 import {
     createSlateSelection,
@@ -28,23 +28,42 @@ import {
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 
-const Rte = ({dispatch, state}: { dispatch: Dispatch<SlateAction>, state: SlateState }) => {
+const Rte = ({dispatch, state}: {
+    dispatch: Dispatch<ReducerAction<typeof reducer>>,
+    state: ReducerState<typeof reducer>
+}) => {
     const editor = useMemo(() => withReact(createEditor()), []);
     const editorId = useMemo(() => generateUuid(), []);
     const ref = useRef(false);
-    const refOperations = useRef<(TextOperation | NodeOperation)[]>([]);
+    const refOperations = useRef<BaseOperation[]>([]);
+    const {nodes, lastUpdated} = state;
 
-    const {lastUpdated} = state;
-    if (editorId !== lastUpdated) {
-        ref.current = true;
-        const {nodes} = state;
-        resetNodes(editor, nodes);
-    }
+    useEffect(() => {
+        if (lastUpdated !== editorId) {
+            ref.current = true;
+            resetNodes(editor, nodes, state['@selection']);
+        }
+    }, [lastUpdated, nodes]);
 
     const flush = useDebounce(() => {
-        const operations = refOperations.current;
+        const selectionOperations: SelectionOperation[] = [];
+        const mutationOperations: Exclude<BaseOperation, SelectionOperation>[] = [];
+
+        refOperations.current.forEach(operation => {
+            if (Operation.isSelectionOperation(operation)) {
+                selectionOperations.push(operation);
+            } else {
+                mutationOperations.push(operation);
+            }
+        })
+
         refOperations.current = [];
-        dispatch({type: 'operation', editorId, operations});
+        if (mutationOperations.length) {
+            dispatch({type: 'operation', editorId, operations: mutationOperations});
+        }
+        if (selectionOperations.length || mutationOperations.length) {
+            dispatch({type: 'select', selection: editor.selection})
+        }
     }, 300);
 
     return useMemo(() => (
@@ -53,11 +72,10 @@ const Rte = ({dispatch, state}: { dispatch: Dispatch<SlateAction>, state: SlateS
                 ref.current = false;
                 return;
             }
-            const operations = editor.operations.filter(operation => !Operation.isSelectionOperation(operation)) as (TextOperation | NodeOperation)[];
-            refOperations.current.push(...operations);
+            refOperations.current.push(...editor.operations);
             flush();
         }}>
-            <Editable/>
+            <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
         </Slate>
     ), [editor, flush, state.nodes]);
 };
@@ -114,14 +132,14 @@ export default function SlateApp() {
     );
 }
 
-function resetNodes(editor: Editor, nodes: CustomElement[]): void {
+function resetNodes(editor: Editor, nodes: CustomElement[], selection: Selection): void {
     const children = [...editor.children];
     Editor.withoutNormalizing(editor, () => {
         children.forEach((node) => editor.apply({type: 'remove_node', path: [0], node}))
         nodes.forEach((node, i) => editor.apply({type: 'insert_node', path: [i], node: node}))
     });
 
-    // editor.selection = selection;
+    editor.selection = selection;
     Editor.normalize(editor);
 }
 
