@@ -15,12 +15,10 @@ import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
     HistoryButtonGroup,
-    HistoryReducerConfig,
     isWebsocketConnected,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketConnectionAlert,
-    WebsocketReducerConfig
 } from "../history-websocket-client";
 import {Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
@@ -28,23 +26,14 @@ import {createWebsocket, generateUuid} from "../common-util";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faMinus, faPlus} from "@fortawesome/free-solid-svg-icons";
 
-const historyConfig: HistoryReducerConfig<TodoState, TodoAction, TodoSelection, SelectionAction> = {
-    createRevertAction: todoActionReverter,
-    selectionReducer: todoSelectionReducer,
-    isSelectionAction: isTodoSelectionAction
-};
-
-const websocketConfig: WebsocketReducerConfig<TodoAction, TodoSelection, SelectionAction> = {
+const appReducer = createHistoryWebsocketReducer(todoReducer, {
     createWebsocket: () => {
         return createWebsocket('/ws/todo');
     },
+    createRevertAction: todoActionReverter,
     selectionReducer: todoSelectionReducer,
     isSelectionAction: isTodoSelectionAction
-}
 
-const appReducer = createHistoryWebsocketReducer(todoReducer, {
-    history: historyConfig,
-    websocket: websocketConfig
 });
 
 const appState = createHistoryWebsocketState<TodoState, TodoAction, TodoSelection>(createTodoState(), undefined);

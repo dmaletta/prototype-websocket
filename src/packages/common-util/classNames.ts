@@ -1,5 +1,5 @@
 export default function classNames(...args: (undefined | string | { [key: string]: boolean })[]): undefined | string {
-    let classes: string[] = [];
+    const classes: string[] = [];
 
     for (const arg of args) {
         if (!arg) continue;

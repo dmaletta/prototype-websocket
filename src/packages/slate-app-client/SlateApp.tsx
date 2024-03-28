@@ -19,12 +19,10 @@ import {
     createHistoryWebsocketReducer,
     createHistoryWebsocketState,
     HistoryButtonGroup,
-    HistoryReducerConfig,
     isWebsocketConnected,
     useHistoryKeyPress,
     WebsocketClientList,
     WebsocketConnectionAlert,
-    WebsocketReducerConfig
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 
@@ -43,7 +41,7 @@ const Rte = ({dispatch, state}: {
             ref.current = true;
             resetNodes(editor, nodes, state['@selection']);
         }
-    }, [lastUpdated, nodes]);
+    }, [editor, editorId, lastUpdated, nodes, state]);
 
     const flush = useDebounce(() => {
         const selectionOperations: SelectionOperation[] = [];
@@ -77,26 +75,16 @@ const Rte = ({dispatch, state}: {
         }}>
             <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
         </Slate>
-    ), [editor, flush, state.nodes]);
+    ), [dispatch, editor, flush, state.nodes]);
 };
 
-const historyConfig: HistoryReducerConfig<SlateState, SlateAction, SlateSelection, SlateSelectionAction> = {
-    createRevertAction: revertSlateAction,
-    selectionReducer: reduceSlateSelection,
-    isSelectionAction: isSlateSelectionAction
-};
-
-const websocketConfig: WebsocketReducerConfig<SlateAction, SlateSelection, SlateSelectionAction> = {
+const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
     createWebsocket: () => {
         return createWebsocket('/ws/slate');
     },
+    createRevertAction: revertSlateAction,
     selectionReducer: reduceSlateSelection,
     isSelectionAction: isSlateSelectionAction,
-}
-
-const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
-    history: historyConfig,
-    websocket: websocketConfig
 });
 
 const initState = createHistoryWebsocketState<SlateState, SlateAction, SlateSelection>(createSlateState(), createSlateSelection());

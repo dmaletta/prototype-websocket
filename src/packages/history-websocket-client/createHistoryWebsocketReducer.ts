@@ -6,7 +6,6 @@ import createWebsocketReducer, {
     WebsocketState
 } from "./createWebsocketReducer.ts";
 import createHistoryReducer, {
-    ActionReverter,
     createHistoryState,
     HistoryReducerConfig,
     HistoryState,
@@ -18,10 +17,9 @@ export function createHistoryWebsocketState<State extends object, Action extends
     return createHistoryState(createWebsocketState(initState), selection);
 }
 
-type HistoryWebsocketReducerConfig<State extends object, Action extends object, Selection, SelectionAction> = {
-    history: HistoryReducerConfig<State, Action, Selection, SelectionAction>
-    websocket: WebsocketReducerConfig<Action, Selection, SelectionAction>
-}
+type HistoryWebsocketReducerConfig<State extends object, Action extends object, Selection, SelectionAction> =
+    HistoryReducerConfig<State, Action, Selection, SelectionAction>
+    & WebsocketReducerConfig<Action, Selection, SelectionAction>
 
 export function isWebsocketConnected<Action, Selection>(state: WebsocketState<Action, Selection>) {
     return state['@websocket'].connected;
@@ -29,38 +27,40 @@ export function isWebsocketConnected<Action, Selection>(state: WebsocketState<Ac
 
 export default function createHistoryWebsocketReducer<State extends object, Action extends object, Selection, SelectionAction>
 (reducer: Reducer<State, Action>, config: HistoryWebsocketReducerConfig<State, Action, Selection, SelectionAction>) {
-    const {history: historyConfig, websocket: websocketConfig} = config
-
-    const createRevertAction: ActionReverter<State & WebsocketState<Action, Selection>, Action | WebsocketAction<State, Action, Selection, SelectionAction>> = (prevState, action) => {
-        if (isWebsocketAction(action)) {
-            return null;
-        }
-
-        return historyConfig.createRevertAction(prevState, action);
-    }
-
-    const isSelectionAction = (action: Action | SelectionAction | WebsocketAction<State, Action, Selection, SelectionAction>): action is SelectionAction => {
-        return !isWebsocketAction(action) && historyConfig.isSelectionAction(action);
-    }
-
-    const historyConfigWithWebsocket: HistoryReducerConfig<State & WebsocketState<Action, Selection>, Action | WebsocketAction<State, Action, Selection, SelectionAction>, Selection, SelectionAction> = {
-        ...historyConfig,
-        createRevertAction,
-        isSelectionAction
+    const websocketConfig: WebsocketReducerConfig<Action, Selection, SelectionAction> = {
+        createWebsocket: config.createWebsocket,
+        selectionReducer: config.selectionReducer,
+        isSelectionAction: config.isSelectionAction
     };
 
-    const wsReducer = createWebsocketReducer<State, Action, Selection, SelectionAction>(reducer, websocketConfig);
-    const historyReducer = createHistoryReducer<State & WebsocketState<Action, Selection>, Action | WebsocketAction<State, Action, Selection, SelectionAction>, Selection, SelectionAction>(wsReducer, historyConfigWithWebsocket);
+    const historyConfig: HistoryReducerConfig<State & WebsocketState<Action, Selection>, Action | WebsocketAction<State, Action, Selection, SelectionAction>, Selection, SelectionAction> = {
+        createRevertAction: (prevState, action) => {
+            if (isWebsocketAction(action)) {
+                return null;
+            }
 
-    const combinedReducer: typeof historyReducer & { connect: (typeof wsReducer)['connect'] } = (state, action) => {
-        if (!isHistoryAction(action) && !isWebsocketAction(action) && historyConfig.isSelectionAction(action)) {
-            wsReducer(state, action);
+            return config.createRevertAction(prevState, action);
+        },
+        selectionReducer: config.selectionReducer,
+        isSelectionAction: (action: Action | SelectionAction | WebsocketAction<State, Action, Selection, SelectionAction>): action is SelectionAction => {
+            return !isWebsocketAction(action) && config.isSelectionAction(action);
+        }
+    };
+
+    const websocketReducer = createWebsocketReducer<State, Action, Selection, SelectionAction>(reducer, websocketConfig);
+    const historyReducer = createHistoryReducer<State & WebsocketState<Action, Selection>, Action | WebsocketAction<State, Action, Selection, SelectionAction>, Selection, SelectionAction>(websocketReducer, historyConfig);
+
+    const combinedReducer: typeof historyReducer & {
+        connect: (typeof websocketReducer)['connect']
+    } = (state, action) => {
+        if (!isHistoryAction(action) && !isWebsocketAction(action) && config.isSelectionAction(action)) {
+            websocketReducer(state, action);
         }
 
         return historyReducer(state, action);
     }
 
-    combinedReducer.connect = wsReducer.connect;
+    combinedReducer.connect = websocketReducer.connect;
 
     return combinedReducer;
 }
