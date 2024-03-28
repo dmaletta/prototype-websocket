@@ -20,7 +20,7 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
+import {Alert, Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
 import {createWebsocket, generateUuid} from "../common-util";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -141,7 +141,7 @@ export default function TodoApp() {
                     <HistoryButtonGroup state={state} dispatch={dispatch}/>
                 </Card.Header>
                 <ListGroup variant="flush">
-                    <ListGroup.Item>
+                    <ListGroup.Item variant="success">
                         <TodoAdd dispatch={dispatch}/>
                     </ListGroup.Item>
                     {state.ids.map(id => {
@@ -154,6 +154,7 @@ export default function TodoApp() {
                     })}
                 </ListGroup>
             </Card>
+            <Alert variant="info">{JSON.stringify({ids: state.ids, map: state.map})}</Alert>
         </Container>
     );
 }
