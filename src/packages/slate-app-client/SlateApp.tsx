@@ -1,6 +1,16 @@
-import {Dispatch, ReducerAction, ReducerState, useEffect, useMemo, useReducer, useRef, useState} from "react";
-import {Editable, Slate, withReact} from "slate-react";
-import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation} from "slate";
+import {
+    Dispatch,
+    ReducerAction,
+    ReducerState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState
+} from "react";
+import {Editable, RenderLeafProps, Slate, withReact,} from "slate-react";
+import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation, Range} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
     createSlateSelection,
@@ -66,6 +76,28 @@ const Rte = ({dispatch, state}: {
         }
     }, 300);
 
+    const currentClientId = state["@websocket"].clientId;
+    const clientIds = state["@websocket"].clientIds;
+    const clientMap = state["@websocket"].clientMap;
+
+    const decorate = useCallback((): Range[] => {
+        return clientIds.flatMap(clientId => {
+            const selection = clientMap[clientId].selection;
+
+            if(!selection || currentClientId === clientId) {
+                return [];
+            }
+
+            const range: Range & {clientId: string} = {
+                anchor: selection.anchor,
+                focus: selection.focus,
+                clientId
+            };
+
+            return [range];
+        })
+    }, [currentClientId, clientIds, clientMap]);
+
     return useMemo(() => {
             const handleSelectionError = (e: Error) => {
                 if (editor.selection && e.message.includes('Cannot resolve a DOM point from Slate point')) {
@@ -87,11 +119,11 @@ const Rte = ({dispatch, state}: {
                 flush();
             }}>
                 <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
+                    <Editable decorate={decorate} onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={RteLeaf} />
                 </ErrorBoundary>
             </Slate>
         }
-        , [editorId, dispatch, editor, flush, state.nodes]);
+        , [decorate, editorId, dispatch, editor, flush, state.nodes]);
 };
 
 const slateReducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
@@ -140,3 +172,27 @@ function resetNodes(editor: Editor, nodes: CustomElement[], selection: Selection
     Editor.normalize(editor);
 }
 
+function RteLeaf({attributes, children, leaf}: RenderLeafProps) {
+    const inside = leaf.clientId ? <span className="position-relative">
+          <span
+              contentEditable={false}
+              className="position-absolute top-0 bottom-0"
+              style={{backgroundColor: 'red', width: 1, opacity: 0.2}}
+          />
+          <span
+              contentEditable={false}
+              className="position-absolute text-white p-1 text-nowrap top-0 rounded"
+              style={{
+                  opacity: 0.2,
+                  backgroundColor: 'red',
+                  transform: 'translateY(-100%)',
+              }}
+          >
+            {leaf.clientId}
+          </span>
+        {children}
+        </span> : children
+
+
+    return <span {...attributes}>{inside}</span>;
+}
