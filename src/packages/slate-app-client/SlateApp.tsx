@@ -1,4 +1,4 @@
-import {Dispatch, ReducerAction, ReducerState, useEffect, useMemo, useReducer, useRef} from "react";
+import {Dispatch, ReducerAction, ReducerState, useEffect, useMemo, useReducer, useRef, useState} from "react";
 import {Editable, Slate, withReact} from "slate-react";
 import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
@@ -26,13 +26,14 @@ import {
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
+import {ErrorBoundary} from "react-error-boundary";
 
 const Rte = ({dispatch, state}: {
     dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
     state: ReducerState<typeof slateReducer>
 }) => {
     const editor = useMemo(() => withReact(createEditor()), []);
-    const editorId = useMemo(() => generateUuid(), []);
+    const [editorId, setEditorId] = useState(generateUuid());
     const ref = useRef(false);
     const refOperations = useRef<BaseOperation[]>([]);
     const {nodes, lastUpdated} = state;
@@ -65,18 +66,42 @@ const Rte = ({dispatch, state}: {
         }
     }, 300);
 
-    return useMemo(() => (
-        <Slate editor={editor} initialValue={state.nodes} onChange={() => {
-            if (ref.current) {
-                ref.current = false;
-                return;
-            }
-            refOperations.current.push(...editor.operations);
-            flush();
-        }}>
-            <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
-        </Slate>
-    ), [dispatch, editor, flush, state.nodes]);
+    return useMemo(() => {
+            const handleSelectionError = (e: Error) => {
+                if (editor.selection && e.message.includes('Cannot resolve a DOM point from Slate point')) {
+                    dispatch({type: 'select', selection: null});
+                    setTimeout(() => {
+                        setEditorId(generateUuid());
+                    })
+                } else {
+                    throw e;
+                }
+            };
+
+            return <Slate key={editorId} editor={editor} initialValue={state.nodes} onChange={() => {
+                if (ref.current) {
+                    ref.current = false;
+                    return;
+                }
+                refOperations.current.push(...editor.operations);
+                flush();
+            }}>
+                <ErrorBoundary onError={handleSelectionError} fallback={null}>
+                    <Editable onKeyDown={(e) => {
+                        if (e.key === 'b' && e.metaKey) {
+                            dispatch({
+                                type: 'operation', operations: [{
+                                    offset: 0, path: [0, 0],
+                                    text: "test",
+                                    type: "remove_text"
+                                }]
+                            })
+                        }
+                    }} onBlur={() => dispatch({type: 'select', selection: null})}/>
+                </ErrorBoundary>
+            </Slate>
+        }
+        , [editorId, dispatch, editor, flush, state.nodes]);
 };
 
 const slateReducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
