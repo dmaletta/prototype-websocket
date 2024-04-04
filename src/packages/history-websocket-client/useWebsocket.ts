@@ -46,7 +46,7 @@ export default function useWebsocket<State extends object, Action, Selection>({
     }, [dispatch, websocket]);
 
     useEffect(() => {
-        if (!websocket || !clientId) {
+        if (!websocket || !clientId || websocket.readyState !== 1) {
             return;
         }
 

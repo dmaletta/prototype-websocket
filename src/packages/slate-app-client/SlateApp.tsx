@@ -87,17 +87,7 @@ const Rte = ({dispatch, state}: {
                 flush();
             }}>
                 <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable onKeyDown={(e) => {
-                        if (e.key === 'b' && e.metaKey) {
-                            dispatch({
-                                type: 'operation', operations: [{
-                                    offset: 0, path: [0, 0],
-                                    text: "test",
-                                    type: "remove_text"
-                                }]
-                            })
-                        }
-                    }} onBlur={() => dispatch({type: 'select', selection: null})}/>
+                    <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
                 </ErrorBoundary>
             </Slate>
         }
