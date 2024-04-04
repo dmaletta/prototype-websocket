@@ -16,13 +16,13 @@ import {
     createHistoryWebsocketState,
     HistoryButtonGroup,
     isWebsocketConnected,
-    useHistoryKeyPress,
+    useHistoryKeyPress, useWebsocket,
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
 import {Alert, Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
-import {generateUuid} from "../common-util";
+import {generateUuid, getWebsocketUrl} from "../common-util";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faMinus, faPlus} from "@fortawesome/free-solid-svg-icons";
 
@@ -106,7 +106,7 @@ function TodoAdd({dispatch}: { dispatch: Dispatch<TodoAction> }) {
 export default function TodoApp() {
     const [state, dispatch] = useReducer(appReducer, appState);
 
-    //useWebsocket({websocketUrl: getWebsocketUrl('/ws/todo'), state, dispatch});
+    useWebsocket({websocketUrl: getWebsocketUrl('/ws/todo'), state, dispatch});
     useHistoryKeyPress(state, dispatch);
 
     if (!isWebsocketConnected(state)) {

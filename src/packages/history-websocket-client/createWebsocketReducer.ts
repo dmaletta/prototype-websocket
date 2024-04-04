@@ -85,7 +85,7 @@ function handleMessage<State, Action, Selection>(
                 if (message.clientId === clientId) {
                     let {sending} = state['@websocket'];
                     sending = sending.filter(sent => id !== sent.id);
-                    return {...state, ...reducer(state, action), '@websocket': {...state['@websocket'], sending}};
+                    return {...state, '@websocket': {...state['@websocket'], sending}};
                 } else {
                     return {...state, ...reducer(state, action)};
                 }
