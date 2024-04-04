@@ -10,7 +10,17 @@ import {
     useState
 } from "react";
 import {Editable, RenderLeafProps, Slate, withReact,} from "slate-react";
-import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation, Range} from "slate";
+import {
+    BaseOperation,
+    createEditor,
+    Editor,
+    NodeEntry,
+    Operation,
+    Path,
+    Range,
+    Selection,
+    SelectionOperation
+} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
     createSlateSelection,
@@ -80,15 +90,19 @@ const Rte = ({dispatch, state}: {
     const clientIds = state["@websocket"].clientIds;
     const clientMap = state["@websocket"].clientMap;
 
-    const decorate = useCallback((): Range[] => {
+    const decorate = useCallback(([, path]: NodeEntry): Range[] => {
         return clientIds.flatMap(clientId => {
             const selection = clientMap[clientId].selection;
 
-            if(!selection || currentClientId === clientId) {
+            if (!selection || currentClientId === clientId) {
                 return [];
             }
 
-            const range: Range & {clientId: string} = {
+            if (!Path.equals(path, selection.anchor.path) && !Path.equals(path, selection.focus.path)) {
+                return [];
+            }
+
+            const range: Range & { clientId: string } = {
                 anchor: selection.anchor,
                 focus: selection.focus,
                 clientId
@@ -119,7 +133,8 @@ const Rte = ({dispatch, state}: {
                 flush();
             }}>
                 <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable decorate={decorate} onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={RteLeaf} />
+                    <Editable decorate={decorate} onBlur={() => dispatch({type: 'select', selection: null})}
+                              renderLeaf={RteLeaf}/>
                 </ErrorBoundary>
             </Slate>
         }
@@ -177,13 +192,13 @@ function RteLeaf({attributes, children, leaf}: RenderLeafProps) {
           <span
               contentEditable={false}
               className="position-absolute top-0 bottom-0"
-              style={{backgroundColor: 'red', width: 1, opacity: 0.2}}
+              style={{backgroundColor: 'red', width: 1}}
           />
           <span
               contentEditable={false}
               className="position-absolute text-white p-1 text-nowrap top-0 rounded"
               style={{
-                  opacity: 0.2,
+                  opacity: 0.5,
                   backgroundColor: 'red',
                   transform: 'translateY(-100%)',
               }}
@@ -192,7 +207,6 @@ function RteLeaf({attributes, children, leaf}: RenderLeafProps) {
           </span>
         {children}
         </span> : children
-
 
     return <span {...attributes}>{inside}</span>;
 }
