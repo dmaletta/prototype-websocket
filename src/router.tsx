@@ -9,12 +9,10 @@ const Layout = ({children}: { children: ReactNode }) => {
         <>
             <Navbar expand="lg" className="bg-body-tertiary mb-3">
                 <Container>
-                    <Navbar.Collapse id="basic-navbar-nav">
-                        <Nav className="me-auto">
-                            <Link to="/slate" className="nav-link">Slate App</Link>
-                            <Link to="/todo" className="nav-link">Todo App</Link>
-                        </Nav>
-                    </Navbar.Collapse>
+                    <Nav className="me-auto">
+                        <Link to="/slate" className="nav-link">Slate App</Link>
+                        <Link to="/todo" className="nav-link">Todo App</Link>
+                    </Nav>
                 </Container>
             </Navbar>
             <Container>
