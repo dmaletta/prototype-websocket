@@ -1,19 +1,8 @@
 import {createWebsocketHandler} from "../history-websocket-server";
-import {
-    createTodoState,
-    isTodoSelectionAction,
-    SelectionAction,
-    TodoAction,
-    todoReducer,
-    TodoSelection,
-    todoSelectionReducer,
-    TodoState
-} from "./../todo-app-shared";
+import {createTodoState, TodoAction, todoReducer, TodoSelection, TodoState} from "./../todo-app-shared";
 
-export default createWebsocketHandler<TodoState, TodoAction, TodoSelection, SelectionAction>({
+export default createWebsocketHandler<TodoState, TodoAction, TodoSelection>({
     reducer: todoReducer,
     initState: createTodoState(),
-    initialSelection: undefined,
-    reduceSelection: todoSelectionReducer,
-    isSelectionAction: isTodoSelectionAction
+    initialSelection: undefined
 });
