@@ -112,7 +112,7 @@ export type HistoryReducerConfig<State, Action, Selection, SelectionAction> = {
 export default function createHistoryReducer<State, Action, Selection, SelectionAction>(reducer: Reducer<State, Action>, config: HistoryReducerConfig<State, Action, Selection, SelectionAction>): Reducer<State & HistoryState<Action, Selection>, Action | HistoryAction | SelectionAction> {
     const {createRevertAction, selectionReducer, isSelectionAction} = config;
 
-    return (state, action) => {
+    return (state, action): State & HistoryState<Action, Selection> => {
         const {past, future} = state["@history"];
         const selection = state['@selection'];
 

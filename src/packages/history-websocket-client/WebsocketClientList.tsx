@@ -15,7 +15,8 @@ export default function WebsocketClientList<Action, Selection>({state, ...props}
                         style={clientId === state['@websocket'].clientId ? {color: 'green'} : undefined}
                         key={clientId}>
                         {clientId}
-                        <Alert className="mt-2">{JSON.stringify(state['@websocket'].selections[clientId])}</Alert>
+                        <Alert
+                            className="mt-2">{JSON.stringify(state['@websocket'].clientMap[clientId].selection)}</Alert>
                     </ListGroup.Item>
                 )}
             </ListGroup>

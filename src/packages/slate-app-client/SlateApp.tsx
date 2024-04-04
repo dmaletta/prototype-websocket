@@ -1,7 +1,7 @@
 import {Dispatch, ReducerAction, ReducerState, useEffect, useMemo, useReducer, useRef} from "react";
 import {Editable, Slate, withReact} from "slate-react";
 import {BaseOperation, createEditor, Editor, Operation, Selection, SelectionOperation} from "slate";
-import {createWebsocket, generateUuid, useDebounce} from "../common-util";
+import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
     createSlateSelection,
     createSlateState,
@@ -21,14 +21,15 @@ import {
     HistoryButtonGroup,
     isWebsocketConnected,
     useHistoryKeyPress,
+    useWebsocket,
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 
 const Rte = ({dispatch, state}: {
-    dispatch: Dispatch<ReducerAction<typeof reducer>>,
-    state: ReducerState<typeof reducer>
+    dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
+    state: ReducerState<typeof slateReducer>
 }) => {
     const editor = useMemo(() => withReact(createEditor()), []);
     const editorId = useMemo(() => generateUuid(), []);
@@ -78,10 +79,7 @@ const Rte = ({dispatch, state}: {
     ), [dispatch, editor, flush, state.nodes]);
 };
 
-const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
-    createWebsocket: () => {
-        return createWebsocket('/ws/slate');
-    },
+const slateReducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
     createRevertAction: revertSlateAction,
     selectionReducer: reduceSlateSelection,
     isSelectionAction: isSlateSelectionAction,
@@ -90,12 +88,8 @@ const reducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSele
 const initState = createHistoryWebsocketState<SlateState, SlateAction, SlateSelection>(createSlateState(), createSlateSelection());
 
 export default function SlateApp() {
-    const [state, dispatch] = useReducer(reducer, initState);
-
-    useEffect(() => {
-        return reducer.connect(dispatch);
-    }, [dispatch]);
-
+    const [state, dispatch] = useReducer(slateReducer, initState);
+    useWebsocket({websocketUrl: getWebsocketUrl('/ws/slate'), state, dispatch});
     useHistoryKeyPress(state, dispatch);
 
     if (!isWebsocketConnected(state)) {

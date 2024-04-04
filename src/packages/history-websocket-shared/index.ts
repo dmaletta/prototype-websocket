@@ -1,21 +1,20 @@
+export type Client<Selection> = {
+    id: string,
+    selection: Selection
+}
+
+export type ClientMap<Selection> = { [clientId: string]: Client<Selection> }
+
 export type WebsocketInitMessage<State, Selection> = {
     type: 'init'
     clientId: string,
-    clientIds: string[]
-    selections: { [clientId: string]: Selection | undefined }
+    clientMap: ClientMap<Selection>
     state: State
 }
 
-export type WebsocketSelectionMessage<SelectionAction> = {
-    type: 'selection',
-    clientId: string,
-    actionId: string,
-    action: SelectionAction
-}
-
-export type WebsocketConnectedMessage = {
+export type WebsocketConnectedMessage<Selection> = {
     type: 'connected',
-    clientId: string
+    client: Client<Selection>
 }
 
 export type WebsocketCloseMessage = {
@@ -23,16 +22,20 @@ export type WebsocketCloseMessage = {
     clientId: string,
 }
 
-export type WebsocketActionMessage<Action> = {
-    type: 'action',
-    clientId: string,
-    actionId: string,
+export type ActionEntry<Action> = {
+    id: string,
     action: Action
 }
 
-export type WebsocketMessage<State, Action, Selection, SelectionAction> =
+export type WebsocketActionMessage<Action, Selection> = {
+    type: 'action',
+    clientId: string,
+    selection: Selection,
+    entries: ActionEntry<Action>[]
+}
+
+export type WebsocketMessage<State, Action, Selection> =
     WebsocketInitMessage<State, Selection>
     | WebsocketCloseMessage
-    | WebsocketActionMessage<Action>
-    | WebsocketConnectedMessage
-    | WebsocketSelectionMessage<SelectionAction>;
+    | WebsocketActionMessage<Action, Selection>
+    | WebsocketConnectedMessage<Selection>

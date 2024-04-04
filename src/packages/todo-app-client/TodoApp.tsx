@@ -22,19 +22,17 @@ import {
 } from "../history-websocket-client";
 import {Alert, Button, Card, Container, Form, InputGroup, ListGroup} from "react-bootstrap";
 import {BsPrefixRefForwardingComponent} from "react-bootstrap/helpers";
-import {createWebsocket, generateUuid} from "../common-util";
+import {generateUuid} from "../common-util";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faMinus, faPlus} from "@fortawesome/free-solid-svg-icons";
 
-const appReducer = createHistoryWebsocketReducer(todoReducer, {
-    createWebsocket: () => {
-        return createWebsocket('/ws/todo');
-    },
+const historyWebsocketReducer = createHistoryWebsocketReducer(todoReducer, {
     createRevertAction: todoActionReverter,
     selectionReducer: todoSelectionReducer,
     isSelectionAction: isTodoSelectionAction
-
 });
+
+const appReducer: typeof historyWebsocketReducer = (state, action) => historyWebsocketReducer(state, action);
 
 const appState = createHistoryWebsocketState<TodoState, TodoAction, TodoSelection>(createTodoState(), undefined);
 
@@ -65,13 +63,6 @@ function TodoView({dispatch, todo, selected, locked}: {
         console.log('focus');
         if (!selected) {
             dispatch({type: 'todo-select', todoId: todo.id});
-        }
-    }
-
-    const blur = () => {
-        console.log('blur');
-        if (selected) {
-            dispatch({type: 'clear-select'});
         }
     }
 
@@ -115,10 +106,7 @@ function TodoAdd({dispatch}: { dispatch: Dispatch<TodoAction> }) {
 export default function TodoApp() {
     const [state, dispatch] = useReducer(appReducer, appState);
 
-    useEffect(() => {
-        return appReducer.connect(dispatch);
-    }, [dispatch]);
-
+    //useWebsocket({websocketUrl: getWebsocketUrl('/ws/todo'), state, dispatch});
     useHistoryKeyPress(state, dispatch);
 
     if (!isWebsocketConnected(state)) {
@@ -129,7 +117,7 @@ export default function TodoApp() {
         return state['@websocket'].clientIds.some(clientId => {
             if (clientId === state['@websocket'].clientId) return false;
 
-            return state['@websocket'].selections[clientId] === todoId;
+            return state['@websocket'].clientMap[clientId].selection === todoId;
         })
     }
 
