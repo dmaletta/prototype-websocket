@@ -48,7 +48,7 @@ export function createSlateState(): SlateState {
     return {
         nodes: [{
             type: 'paragraph',
-            children: [{text: 'test'}],
+            children: [{text: 'Write Your Text Here!'}],
         }]
     };
 }
