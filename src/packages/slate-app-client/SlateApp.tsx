@@ -1,9 +1,10 @@
-import {
+import React, {
     Dispatch,
     ReactNode,
     ReducerAction,
     ReducerState,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useReducer,
     useRef,
@@ -35,7 +36,7 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
+import {Alert, ButtonToolbar, Card, Container, Overlay, Tooltip, TooltipProps} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
 import getDomRects from "./getDomRects.ts";
 import {ClientMap} from "../history-websocket-shared";
@@ -178,7 +179,8 @@ function Selections({clientId, clientMap, clientIds, children}: SelectionsProps)
                         return null;
                     }
 
-                    return <ClientSelection key={id} selection={selection} parent={parent.getBoundingClientRect()}/>
+                    return <ClientSelection clientId={id} key={id} selection={selection}
+                                            parent={parent.getBoundingClientRect()}/>
                 }) : null}
             </div>
         </div>
@@ -186,19 +188,22 @@ function Selections({clientId, clientMap, clientIds, children}: SelectionsProps)
 }
 
 type ClientSelectionProps = {
+    clientId: string
     parent: DOMRect,
     selection: BaseRange
 }
 
-function ClientSelection({selection, parent}: ClientSelectionProps) {
+function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
     const editor = useSlate();
+    const ref = useRef<HTMLDivElement>(null);
 
     const rects = getDomRects(editor, selection);
+    let renderRects: ReactNode[] = []
 
     if (Range.isCollapsed(selection) && rects.length) {
-        console.log(rects[0]);
-        return (
+        renderRects.push(
             <div
+                ref={ref}
                 style={{
                     position: 'absolute',
                     top: rects[0].top - parent.top,
@@ -210,22 +215,44 @@ function ClientSelection({selection, parent}: ClientSelectionProps) {
                 }}
             />
         );
+    } else {
+        renderRects = rects.map((rect, index) => (
+            <div
+                ref={index === 0 ? ref : undefined}
+                key={index}
+                style={{
+                    position: 'absolute',
+                    top: rect.top - parent.top,
+                    left: rect.left - parent.left,
+                    width: rect.width,
+                    height: rect.height,
+                    backgroundColor: 'rgba(0, 0, 255, 0.5)',
+                    pointerEvents: 'none',
+                }}
+            />
+        ));
     }
 
-    const renderRects = rects.map((rect, index) => (
-        <div
-            key={index}
-            style={{
-                position: 'absolute',
-                top: rect.top - parent.top,
-                left: rect.left - parent.left,
-                width: rect.width,
-                height: rect.height,
-                backgroundColor: 'rgba(0, 0, 255, 0.5)',
-                pointerEvents: 'none',
-            }}
-        />
-    ));
-
-    return <>{renderRects}</>;
+    return <>
+        {renderRects}
+        <Overlay target={ref.current} show={true} placement="top">
+            <OverlayTooltip selection={selection}>{clientId}</OverlayTooltip>
+        </Overlay>
+    </>;
 }
+
+const OverlayTooltip = React.forwardRef<HTMLDivElement, TooltipProps & { selection: Selection }>(
+    ({selection, children, popper, ...props}, ref) => {
+        useLayoutEffect(() => {
+            if (popper && popper.scheduleUpdate) {
+                popper.scheduleUpdate();
+            }
+        }, [selection, popper]);
+
+        return (
+            <Tooltip ref={ref} {...props}>
+                {children}
+            </Tooltip>
+        );
+    }
+);
