@@ -16,7 +16,8 @@ import {
     createHistoryWebsocketState,
     HistoryButtonGroup,
     isWebsocketConnected,
-    useHistoryKeyPress, useWebsocket,
+    useHistoryKeyPress,
+    useWebsocket,
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";

@@ -1,26 +1,16 @@
 import {
     Dispatch,
+    ReactNode,
     ReducerAction,
     ReducerState,
-    useCallback,
     useEffect,
     useMemo,
     useReducer,
     useRef,
     useState
 } from "react";
-import {Editable, RenderLeafProps, Slate, withReact,} from "slate-react";
-import {
-    BaseOperation,
-    createEditor,
-    Editor,
-    NodeEntry,
-    Operation,
-    Path,
-    Range,
-    Selection,
-    SelectionOperation
-} from "slate";
+import {Editable, Slate, useSlate, withReact,} from "slate-react";
+import {BaseOperation, BaseRange, createEditor, Editor, Operation, Range, Selection, SelectionOperation} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
     createSlateSelection,
@@ -47,6 +37,8 @@ import {
 } from "../history-websocket-client";
 import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
+import getDomRects from "./getDomRects.ts";
+import {ClientMap} from "../history-websocket-shared";
 
 const Rte = ({dispatch, state}: {
     dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
@@ -86,59 +78,37 @@ const Rte = ({dispatch, state}: {
         }
     }, 300);
 
-    const currentClientId = state["@websocket"].clientId;
+    const clientId = state["@websocket"].clientId;
     const clientIds = state["@websocket"].clientIds;
     const clientMap = state["@websocket"].clientMap;
 
-    const decorate = useCallback(([, path]: NodeEntry): Range[] => {
-        return clientIds.flatMap(clientId => {
-            const selection = clientMap[clientId].selection;
-
-            if (!selection || currentClientId === clientId) {
-                return [];
-            }
-
-            if (!Path.equals(path, selection.anchor.path) && !Path.equals(path, selection.focus.path)) {
-                return [];
-            }
-
-            const range: Range & { clientId: string } = {
-                anchor: selection.anchor,
-                focus: selection.focus,
-                clientId
-            };
-
-            return [range];
-        })
-    }, [currentClientId, clientIds, clientMap]);
-
-    return useMemo(() => {
-            const handleSelectionError = (e: Error) => {
-                if (editor.selection && e.message.includes('Cannot resolve a DOM point from Slate point')) {
-                    dispatch({type: 'select', selection: null});
-                    setTimeout(() => {
-                        setEditorId(generateUuid());
-                    })
-                } else {
-                    throw e;
-                }
-            };
-
-            return <Slate key={editorId} editor={editor} initialValue={state.nodes} onChange={() => {
-                if (ref.current) {
-                    ref.current = false;
-                    return;
-                }
-                refOperations.current.push(...editor.operations);
-                flush();
-            }}>
-                <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable decorate={decorate} onBlur={() => dispatch({type: 'select', selection: null})}
-                              renderLeaf={RteLeaf}/>
-                </ErrorBoundary>
-            </Slate>
+    const handleSelectionError = (e: Error) => {
+        if (editor.selection && e.message.includes('Cannot resolve a DOM point from Slate point')) {
+            dispatch({type: 'select', selection: null});
+            setTimeout(() => {
+                setEditorId(generateUuid());
+            })
+        } else {
+            throw e;
         }
-        , [decorate, editorId, dispatch, editor, flush, state.nodes]);
+    };
+
+    return (
+        <Slate key={editorId} editor={editor} initialValue={state.nodes} onChange={() => {
+            if (ref.current) {
+                ref.current = false;
+                return;
+            }
+            refOperations.current.push(...editor.operations);
+            flush();
+        }}>
+            <Selections clientIds={clientIds} clientMap={clientMap} clientId={clientId}>
+                <ErrorBoundary onError={handleSelectionError} fallback={null}>
+                    <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
+                </ErrorBoundary>
+            </Selections>
+        </Slate>
+    );
 };
 
 const slateReducer = createHistoryWebsocketReducer<SlateState, SlateAction, SlateSelection, SlateSelectionAction>(reduceSlateState, {
@@ -187,26 +157,75 @@ function resetNodes(editor: Editor, nodes: CustomElement[], selection: Selection
     Editor.normalize(editor);
 }
 
-function RteLeaf({attributes, children, leaf}: RenderLeafProps) {
-    const inside = leaf.clientId ? <span className="position-relative">
-          <span
-              contentEditable={false}
-              className="position-absolute top-0 bottom-0"
-              style={{backgroundColor: 'red', width: 1}}
-          />
-          <span
-              contentEditable={false}
-              className="position-absolute text-white p-1 text-nowrap top-0 rounded"
-              style={{
-                  opacity: 0.5,
-                  backgroundColor: 'red',
-                  transform: 'translateY(-100%)',
-              }}
-          >
-            {leaf.clientId}
-          </span>
-        {children}
-        </span> : children
+type SelectionsProps = {
+    clientId?: string,
+    clientIds: string[],
+    clientMap: ClientMap<Selection>,
+    children: ReactNode
+}
 
-    return <span {...attributes}>{inside}</span>;
+function Selections({clientId, clientMap, clientIds, children}: SelectionsProps) {
+    const ref = useRef<HTMLDivElement>(null);
+    const parent = ref.current;
+
+    return (
+        <div className="position-relative" ref={ref}>
+            {children}
+            <div>
+                {parent ? clientIds.map(id => {
+                    const selection = clientMap[id].selection;
+                    if (!selection || id === clientId) {
+                        return null;
+                    }
+
+                    return <ClientSelection key={id} selection={selection} parent={parent.getBoundingClientRect()}/>
+                }) : null}
+            </div>
+        </div>
+    );
+}
+
+type ClientSelectionProps = {
+    parent: DOMRect,
+    selection: BaseRange
+}
+
+function ClientSelection({selection, parent}: ClientSelectionProps) {
+    const editor = useSlate();
+
+    const rects = getDomRects(editor, selection);
+
+    if (Range.isCollapsed(selection) && rects.length) {
+        console.log(rects[0]);
+        return (
+            <div
+                style={{
+                    position: 'absolute',
+                    top: rects[0].top - parent.top,
+                    left: rects[0].left - parent.left - 1,
+                    width: 3,
+                    height: rects[0].height,
+                    backgroundColor: 'rgba(0, 0, 255, 0.75)',
+                    pointerEvents: 'none',
+                }}
+            />
+        );
+    }
+
+    const renderRects = rects.map((rect, index) => (
+        <div
+            key={index}
+            style={{
+                position: 'absolute',
+                top: rect.top - parent.top,
+                left: rect.left - parent.left,
+                width: rect.width,
+                height: rect.height,
+                backgroundColor: 'rgba(0, 0, 255, 0.5)',
+                pointerEvents: 'none',
+            }}
+        />
+    ));
+
+    return <>{renderRects}</>;
 }
