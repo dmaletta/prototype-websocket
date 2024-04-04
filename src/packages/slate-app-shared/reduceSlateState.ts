@@ -12,7 +12,7 @@ import {
 import {ReactEditor} from "slate-react";
 
 export type CustomElement = { type: 'paragraph'; children: CustomText[] }
-export type CustomText = { text: string }
+export type CustomText = { text: string, clientId?: string }
 
 declare module 'slate' {
     interface CustomTypes {
