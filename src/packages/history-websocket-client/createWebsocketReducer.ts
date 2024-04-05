@@ -1,6 +1,6 @@
 import {Reducer} from "react";
 import {getObjectUuid} from "./../common-util";
-import {ActionEntry, ClientMap, WebsocketMessage} from "../history-websocket-shared";
+import {ActionWithId, ClientMap, WebsocketMessage} from "../history-websocket-shared";
 
 export type WebsocketSentMessageAction<State extends object, Action, Selection> = {
     type: '@websocket/sent',
@@ -19,8 +19,8 @@ export type WebsocketCloseAction = {
 export type WebsocketState<Action, Selection> = {
     '@selection': Selection,
     '@websocket': {
-        queue: ActionEntry<Action>[],
-        sending: ActionEntry<Action>[],
+        queue: ActionWithId<Action>[],
+        sending: ActionWithId<Action>[],
         connected: boolean
         clientId?: string
         clientIds: string[]
@@ -78,13 +78,11 @@ function handleMessage<State, Action, Selection>(
             };
             const nextState = {...state, '@websocket': {...state['@websocket'], clientMap: nextClientMap}}
 
-            return message.entries.reduce((state, entry) => {
-                const {action, id} = entry;
-
+            return message.actions.reduce((state, action) => {
                 //remove from sent list if message is from same client
                 if (message.clientId === clientId) {
                     let {sending} = state['@websocket'];
-                    sending = sending.filter(sent => id !== sent.id);
+                    sending = sending.filter(sent => action['@id'] !== sent['@id']);
                     return {...state, '@websocket': {...state['@websocket'], sending}};
                 } else {
                     return {...state, ...reducer(state, action)};
@@ -145,8 +143,6 @@ export default function createWebsocketReducer<State extends object, Action exte
     const {isSelectionAction, selectionReducer} = config;
 
     return (state: State & WebsocketState<Action, Selection>, action: Action | WebsocketAction<State, Action, Selection> | SelectionAction): State & WebsocketState<Action, Selection> => {
-        console.log('action: ', action);
-
         if (isWebsocketAction(action)) {
             switch (action.type) {
                 case "@websocket/received": {
@@ -162,9 +158,9 @@ export default function createWebsocketReducer<State extends object, Action exte
                     const sending = [...state['@websocket'].sending];
                     let queue = [...state['@websocket'].queue];
 
-                    message.entries.forEach(entry => {
-                        sending.push(entry);
-                        queue = queue.filter(q => q.id !== entry.id);
+                    message.actions.forEach(action => {
+                        sending.push(action);
+                        queue = queue.filter(q => q['@id'] !== action['@id']);
                     })
 
                     return {...state, '@websocket': {...state['@websocket'], sending, queue}};
@@ -182,9 +178,9 @@ export default function createWebsocketReducer<State extends object, Action exte
         } else {
             return {
                 ...reducer(state, action), '@selection': state['@selection'], '@websocket': {
-                    ...state['@websocket'], queue: [...state['@websocket'].queue, {
-                        action, id: getObjectUuid(action as object)
-                    }]
+                    ...state['@websocket'], queue: [...state['@websocket'].queue,
+                        {...action, '@id': getObjectUuid(action)}
+                    ]
                 }
             };
         }

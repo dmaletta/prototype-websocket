@@ -30,12 +30,10 @@ export default function useWebsocket<State extends object, Action, Selection>({
         websocket.onmessage = (event) => {
             //@todo needs validation
             const message: WebsocketMessage<State, Action, Selection> = JSON.parse(event.data.toString());
-            console.log('received message: ', message);
             dispatch({type: '@websocket/received', message});
         }
 
         websocket.onclose = () => {
-            console.log('onclose');
             dispatch({'type': '@websocket/close'});
         }
 
@@ -54,21 +52,17 @@ export default function useWebsocket<State extends object, Action, Selection>({
             const message: WebsocketActionMessage<Action, Selection> = {
                 type: 'action',
                 clientId,
-                entries: queue,
+                actions: queue,
                 selection
             };
-
-            console.log('send message: ', message);
-            websocket.send(JSON.stringify(message));
             dispatch({type: '@websocket/sent', message})
         } else {
             const message: WebsocketActionMessage<Action, Selection> = {
                 type: 'action',
                 clientId,
-                entries: [],
+                actions: [],
                 selection
             };
-            console.log('send message: ', message);
             websocket.send(JSON.stringify(message));
         }
     }, [clientId, dispatch, queue, websocket, selection]);

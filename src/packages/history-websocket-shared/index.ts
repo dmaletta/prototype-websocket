@@ -22,16 +22,15 @@ export type WebsocketCloseMessage = {
     clientId: string,
 }
 
-export type ActionEntry<Action> = {
-    id: string,
-    action: Action
+export type ActionWithId<Action> = Action & {
+    '@id': string
 }
 
 export type WebsocketActionMessage<Action, Selection> = {
     type: 'action',
     clientId: string,
     selection: Selection,
-    entries: ActionEntry<Action>[]
+    actions: ActionWithId<Action>[]
 }
 
 export type WebsocketMessage<State, Action, Selection> =

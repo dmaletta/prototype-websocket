@@ -61,7 +61,6 @@ function TodoView({dispatch, todo, selected, locked}: {
     }, [selected]);
 
     const focus = () => {
-        console.log('focus');
         if (!selected) {
             dispatch({type: 'todo-select', todoId: todo.id});
         }

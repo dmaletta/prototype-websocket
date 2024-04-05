@@ -36,8 +36,7 @@ export default function createWebsocketHandler<State extends object, Action exte
             switch (message.type) {
                 case "action": {
                     console.log('received message', message);
-                    state = message.entries.reduce((state, entry) => {
-                        const {action} = entry;
+                    state = message.actions.reduce((state, action) => {
                         const nextState = reducer(state, action);
 
                         if (!nextState) {
