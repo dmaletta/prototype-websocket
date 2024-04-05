@@ -15,7 +15,6 @@ export default function createWebsocketHandler<State extends object, Action exte
     const websocketMap = new Map<string, WebSocket>();
     let state = initState;
     const clientMap: ClientMap<Selection> = {};
-
     const broadcast = (message: WebsocketMessage<State, Action, Selection>) => {
         websocketMap.forEach(ws => {
             send(ws, message);
@@ -23,7 +22,6 @@ export default function createWebsocketHandler<State extends object, Action exte
     }
     const send = (ws: WebSocket, message: WebsocketMessage<State, Action, Selection>) => {
         ws.send(JSON.stringify(message));
-
     }
 
     return (ws: WebSocket) => {

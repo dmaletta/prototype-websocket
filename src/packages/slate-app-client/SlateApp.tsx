@@ -1,4 +1,4 @@
-import React, {
+import {
     Dispatch,
     ReactNode,
     ReducerAction,
@@ -36,7 +36,7 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Alert, ButtonToolbar, Card, Container, Overlay, Tooltip, TooltipProps} from "react-bootstrap";
+import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
 import getDomRects from "./getDomRects.ts";
 import {ClientMap} from "../history-websocket-shared";
@@ -195,64 +195,71 @@ type ClientSelectionProps = {
 
 function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
     const editor = useSlate();
-    const ref = useRef<HTMLDivElement>(null);
-
     const rects = getDomRects(editor, selection);
-    let renderRects: ReactNode[] = []
+    const first = rects[0] ?? null;
+    const isCollapsed = Range.isCollapsed(selection);
+    const tooltipRef = useRef<HTMLDivElement>(null);
 
-    if (Range.isCollapsed(selection) && rects.length) {
-        renderRects.push(
+    useLayoutEffect(() => {
+        const tooltip = tooltipRef.current;
+        if (!tooltip) {
+            return;
+        }
+
+        const {style, clientWidth, clientHeight} = tooltip;
+
+        if (!first) {
+            style.display = 'none';
+            return;
+        }
+
+
+        style.display = 'block';
+        style.top = `${first.top - parent.top - clientHeight}px`;
+        style.left = `${first.left - parent.left - clientWidth / 2 + first.width / 2}px`;
+    }, [first, parent.left, parent.top]);
+
+    if (!first) {
+        return null;
+    }
+
+    return (
+        <>
             <div
-                ref={ref}
+                ref={tooltipRef}
+                className="tooltip bs-tooltip-top position-absolute opacity-100">
+                <div className="tooltip-arrow position-absolute start-50"
+                     style={{marginLeft: 'calc(var(--bs-tooltip-arrow-width) / -2)'}}></div>
+                <div className="tooltip-inner">
+                    {clientId}
+                </div>
+            </div>
+            {isCollapsed ? <div
+                key='collapsed'
+                className="position-absolute pe-none"
                 style={{
-                    position: 'absolute',
-                    top: rects[0].top - parent.top,
-                    left: rects[0].left - parent.left - 1,
+                    top: first.top - parent.top,
+                    left: first.left - parent.left - 1,
                     width: 3,
-                    height: rects[0].height,
+                    height: first.height,
                     backgroundColor: 'rgba(0, 0, 255, 0.75)',
-                    pointerEvents: 'none',
                 }}
-            />
-        );
-    } else {
-        renderRects = rects.map((rect, index) => (
-            <div
-                ref={index === 0 ? ref : undefined}
-                key={index}
-                style={{
-                    position: 'absolute',
-                    top: rect.top - parent.top,
-                    left: rect.left - parent.left,
-                    width: rect.width,
-                    height: rect.height,
-                    backgroundColor: 'rgba(0, 0, 255, 0.5)',
-                    pointerEvents: 'none',
-                }}
-            />
-        ));
-    }
-
-    return <>
-        {renderRects}
-        <Overlay target={ref.current} show={true} placement="top">
-            <OverlayTooltip selection={selection}>{clientId}</OverlayTooltip>
-        </Overlay>
-    </>;
-}
-
-const OverlayTooltip = React.forwardRef<HTMLDivElement, TooltipProps & { selection: Selection }>(
-    ({selection, children, popper, ...props}, ref) => {
-        useLayoutEffect(() => {
-            if (popper && popper.scheduleUpdate) {
-                popper.scheduleUpdate();
+            /> : rects.map((rect, index) => {
+                return (
+                    <div
+                        className="position-absolute pe-none"
+                        key={index}
+                        style={{
+                            top: rect.top - parent.top,
+                            left: rect.left - parent.left,
+                            width: rect.width,
+                            height: rect.height,
+                            backgroundColor: 'rgba(0, 0, 255, 0.5)',
+                        }}
+                    />
+                );
+            })
             }
-        }, [selection, popper]);
-
-        return (
-            <Tooltip ref={ref} {...props}>
-                {children}
-            </Tooltip>
-        );
-    }
-);
+        </>
+    )
+}

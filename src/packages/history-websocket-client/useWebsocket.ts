@@ -55,6 +55,7 @@ export default function useWebsocket<State extends object, Action, Selection>({
                 actions: queue,
                 selection
             };
+            websocket.send(JSON.stringify(message));
             dispatch({type: '@websocket/sent', message})
         } else {
             const message: WebsocketActionMessage<Action, Selection> = {
