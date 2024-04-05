@@ -10,8 +10,17 @@ import {
     useRef,
     useState
 } from "react";
-import {Editable, Slate, useSlate, withReact,} from "slate-react";
-import {BaseOperation, BaseRange, createEditor, Editor, Operation, Range, Selection, SelectionOperation} from "slate";
+import {Editable, ReactEditor, RenderLeafProps, Slate, useSlate, withReact,} from "slate-react";
+import {
+    BaseOperation,
+    BaseRange,
+    createEditor,
+    Editor,
+    Operation,
+    Range,
+    Selection,
+    SelectionOperation, Text
+} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
     createSlateSelection,
@@ -36,10 +45,13 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Alert, ButtonToolbar, Card, Container} from "react-bootstrap";
+import {Alert, Button, ButtonToolbar, Card, Container} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
 import getDomRects from "./getDomRects.ts";
 import {ClientMap} from "../history-websocket-shared";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {IconProp} from "@fortawesome/fontawesome-svg-core";
+import {faBold, faItalic, faUnderline} from "@fortawesome/free-solid-svg-icons";
 
 const Rte = ({dispatch, state}: {
     dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
@@ -103,9 +115,12 @@ const Rte = ({dispatch, state}: {
             refOperations.current.push(...editor.operations);
             flush();
         }}>
+            <FormatButton format="bold" icon={faBold}/>
+            <FormatButton format="italic" icon={faItalic}/>
+            <FormatButton format="underline" icon={faUnderline}/>
             <Selections clientIds={clientIds} clientMap={clientMap} clientId={clientId}>
                 <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable onBlur={() => dispatch({type: 'select', selection: null})}/>
+                    <Editable onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={Leaf}/>
                 </ErrorBoundary>
             </Selections>
         </Slate>
@@ -261,5 +276,55 @@ function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
             })
             }
         </>
+    )
+}
+
+type Format = keyof Omit<Text, 'text'>;
+
+const toggleMark = (editor: ReactEditor, format: Format) => {
+    const isActive = isMarkActive(editor, format)
+
+    if (isActive) {
+        Editor.removeMark(editor, format)
+    } else {
+        Editor.addMark(editor, format, true)
+    }
+}
+
+const isMarkActive = (editor: ReactEditor, format: Format) => {
+    const marks = Editor.marks(editor);
+
+    if(!marks) {
+        return false;
+    }
+
+    return marks[format] === true;
+}
+
+const Leaf = ({attributes, children, leaf}: RenderLeafProps) => {
+    if (leaf.bold) {
+        children = <strong>{children}</strong>
+    }
+
+    if (leaf.italic) {
+        children = <em>{children}</em>
+    }
+
+    if (leaf.underline) {
+        children = <u>{children}</u>
+    }
+
+    return <span {...attributes}>{children}</span>
+}
+
+const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
+    const editor = useSlate()
+    return (
+        <Button
+            active={isMarkActive(editor, format)}
+            onClick={() => toggleMark(editor, format)}
+        >
+            <FontAwesomeIcon icon={icon}/>
+        </Button>
     )
 }
