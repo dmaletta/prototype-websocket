@@ -1,4 +1,4 @@
-import {BaseRange, Editor, Path, Range, Text} from 'slate';
+import {BaseRange, Editor, Node, Path, Range, Text} from 'slate';
 import {ReactEditor} from 'slate-react';
 
 export default function getDomRects(
@@ -19,7 +19,12 @@ export default function getDomRects(
     });
 
     for (const [node, path] of nodes) {
-        const domNode = ReactEditor.toDOMNode(editor, node);
+        const domNode =getDomNode(editor, node);
+
+        if(!domNode) {
+            continue;
+        }
+
         const isStartNode = Path.equals(path, start.path);
         const isEndNode = Path.equals(path, end.path);
 
@@ -50,6 +55,14 @@ function getDomRange(
 ) {
     try {
         return ReactEditor.toDOMRange(editor, range);
+    } catch (e) {
+        return null;
+    }
+}
+
+function getDomNode(editor: ReactEditor, node: Node) {
+    try {
+        return ReactEditor.toDOMNode(editor, node);
     } catch (e) {
         return null;
     }

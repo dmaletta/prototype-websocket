@@ -1,4 +1,4 @@
-import {
+import React, {
     Dispatch,
     ReactNode,
     ReducerAction,
@@ -10,7 +10,17 @@ import {
     useRef,
     useState
 } from "react";
-import {Editable, ReactEditor, RenderLeafProps, Slate, useSlate, withReact,} from "slate-react";
+import {
+    Editable,
+    ReactEditor,
+    RenderLeafProps,
+    Slate,
+    useFocused,
+    useSlate,
+    useSlateSelection,
+    useSlateStatic,
+    withReact,
+} from "slate-react";
 import {
     BaseOperation,
     BaseRange,
@@ -19,7 +29,8 @@ import {
     Operation,
     Range,
     Selection,
-    SelectionOperation, Text
+    SelectionOperation,
+    Text
 } from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
@@ -45,13 +56,14 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Alert, Button, ButtonToolbar, Card, Container} from "react-bootstrap";
+import {Alert, Button, ButtonGroup, ButtonToolbar, Card, Container, Overlay, Popover} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
 import getDomRects from "./getDomRects.ts";
 import {ClientMap} from "../history-websocket-shared";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
 import {faBold, faItalic, faUnderline} from "@fortawesome/free-solid-svg-icons";
+import {VirtualElement} from "@restart/ui/usePopper";
 
 const Rte = ({dispatch, state}: {
     dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
@@ -89,7 +101,7 @@ const Rte = ({dispatch, state}: {
         if (selectionOperations.length || mutationOperations.length) {
             dispatch({type: 'select', selection: editor.selection})
         }
-    }, 300);
+    }, 150);
 
     const clientId = state["@websocket"].clientId;
     const clientIds = state["@websocket"].clientIds;
@@ -115,9 +127,7 @@ const Rte = ({dispatch, state}: {
             refOperations.current.push(...editor.operations);
             flush();
         }}>
-            <FormatButton format="bold" icon={faBold}/>
-            <FormatButton format="italic" icon={faItalic}/>
-            <FormatButton format="underline" icon={faUnderline}/>
+            <OverlayToolbar/>
             <Selections clientIds={clientIds} clientMap={clientMap} clientId={clientId}>
                 <ErrorBoundary onError={handleSelectionError} fallback={null}>
                     <Editable onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={Leaf}/>
@@ -238,17 +248,23 @@ function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
         return null;
     }
 
+    const target: VirtualElement = {
+        getBoundingClientRect: () => {
+            return first;
+        }
+    }
+
     return (
         <>
-            <div
-                ref={tooltipRef}
-                className="tooltip bs-tooltip-top position-absolute opacity-100">
-                <div className="tooltip-arrow position-absolute start-50"
-                     style={{marginLeft: 'calc(var(--bs-tooltip-arrow-width) / -2)'}}></div>
-                <div className="tooltip-inner">
-                    {clientId}
-                </div>
-            </div>
+            <Overlay target={target} show={true} placement="top">
+                {(props) => (
+                    <Popover {...props}>
+                        <Popover.Body>
+                            {clientId}
+                        </Popover.Body>
+                    </Popover>
+                )}
+            </Overlay>
             {isCollapsed ? <div
                 key='collapsed'
                 className="position-absolute pe-none"
@@ -294,7 +310,7 @@ const toggleMark = (editor: ReactEditor, format: Format) => {
 const isMarkActive = (editor: ReactEditor, format: Format) => {
     const marks = Editor.marks(editor);
 
-    if(!marks) {
+    if (!marks) {
         return false;
     }
 
@@ -318,7 +334,7 @@ const Leaf = ({attributes, children, leaf}: RenderLeafProps) => {
 }
 
 const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
-    const editor = useSlate()
+    const editor = useSlate();
     return (
         <Button
             active={isMarkActive(editor, format)}
@@ -332,3 +348,49 @@ const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
         </Button>
     )
 }
+
+const OverlayToolbar = React.memo(() => {
+    const selection = useSlateSelection();
+    const editor = useSlateStatic();
+    const focus = useFocused();
+    const [target, setTarget] = useState<VirtualElement>();
+
+
+    useLayoutEffect(() => {
+        const timeout = setTimeout(() => {
+            const first = selection ? getDomRects(editor, selection)[0] : undefined;
+            if (!first || !selection || Range.isCollapsed(selection) || !focus) {
+                setTarget(undefined);
+                return;
+            }
+            setTarget({
+                getBoundingClientRect: () => first
+            });
+        }, 150);
+
+        return () => clearTimeout(timeout);
+    }, [focus, editor, selection]);
+
+    if (!target) {
+        return null;
+    }
+
+    return (
+        <Overlay target={target} show={!!target}
+                 placement="top">
+            {(props) => (
+                <Popover {...props}>
+                    <Popover.Body>
+                        <ButtonToolbar>
+                            <ButtonGroup>
+                                <FormatButton format="bold" icon={faBold}/>
+                                <FormatButton format="italic" icon={faItalic}/>
+                                <FormatButton format="underline" icon={faUnderline}/>
+                            </ButtonGroup>
+                        </ButtonToolbar>
+                    </Popover.Body>
+                </Popover>
+            )}
+        </Overlay>
+    );
+});
