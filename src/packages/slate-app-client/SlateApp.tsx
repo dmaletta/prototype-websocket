@@ -322,7 +322,11 @@ const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
     return (
         <Button
             active={isMarkActive(editor, format)}
-            onClick={() => toggleMark(editor, format)}
+            onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleMark(editor, format)
+            }}
         >
             <FontAwesomeIcon icon={icon}/>
         </Button>
