@@ -1,8 +1,12 @@
 import {createBrowserRouter, Link} from "react-router-dom";
-import {SlateApp} from "./packages/slate-app-client";
-import {TodoApp} from "./packages/todo-app-client";
-import {ReactNode} from "react";
+import {lazy, ReactNode, Suspense} from "react";
 import {Container, Nav, Navbar} from "react-bootstrap";
+
+const SlateApp = lazy(() =>
+    import('./packages/slate-app-client').then(module => ({default: module.SlateApp})));
+
+const TodoApp = lazy(() =>
+    import('./packages/todo-app-client').then(module => ({default: module.TodoApp})));
 
 const Layout = ({children}: { children: ReactNode }) => {
     return (
@@ -16,7 +20,9 @@ const Layout = ({children}: { children: ReactNode }) => {
                 </Container>
             </Navbar>
             <Container>
-                {children}
+                <Suspense>
+                    {children}
+                </Suspense>
             </Container>
         </>
     )

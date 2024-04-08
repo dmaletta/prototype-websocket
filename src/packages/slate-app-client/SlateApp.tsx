@@ -3,6 +3,7 @@ import React, {
     ReactNode,
     ReducerAction,
     ReducerState,
+    RefObject,
     useEffect,
     useLayoutEffect,
     useMemo,
@@ -12,7 +13,7 @@ import React, {
 } from "react";
 import {
     Editable,
-    ReactEditor,
+    RenderElementProps,
     RenderLeafProps,
     Slate,
     useFocused,
@@ -21,19 +22,10 @@ import {
     useSlateStatic,
     withReact,
 } from "slate-react";
-import {
-    BaseOperation,
-    BaseRange,
-    createEditor,
-    Editor,
-    Operation,
-    Range,
-    Selection,
-    SelectionOperation,
-    Text
-} from "slate";
+import {BaseOperation, BaseRange, Editor, Operation, Range, Selection, SelectionOperation, Text} from "slate";
 import {generateUuid, getWebsocketUrl, useDebounce} from "../common-util";
 import {
+    createSlateEditor,
     createSlateSelection,
     createSlateState,
     CustomElement,
@@ -56,24 +48,36 @@ import {
     WebsocketClientList,
     WebsocketConnectionAlert,
 } from "../history-websocket-client";
-import {Alert, Button, ButtonGroup, ButtonToolbar, Card, Container, Overlay, Popover} from "react-bootstrap";
+import {
+    Alert,
+    Badge,
+    Button,
+    ButtonGroup,
+    ButtonToolbar,
+    Card,
+    Container,
+    FormControl,
+    Overlay,
+    Popover
+} from "react-bootstrap";
 import {ErrorBoundary} from "react-error-boundary";
-import getDomRects from "./getDomRects.ts";
+import getDOMRects, {isDOMRectEqual} from "./getDOMRects.ts";
 import {ClientMap} from "../history-websocket-shared";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {IconProp} from "@fortawesome/fontawesome-svg-core";
-import {faBold, faItalic, faUnderline} from "@fortawesome/free-solid-svg-icons";
+import {faBold, faCommentDots, faItalic, faUnderline} from "@fortawesome/free-solid-svg-icons";
 import {VirtualElement} from "@restart/ui/usePopper";
 
 const Rte = ({dispatch, state}: {
     dispatch: Dispatch<ReducerAction<typeof slateReducer>>,
     state: ReducerState<typeof slateReducer>
 }) => {
-    const editor = useMemo(() => withReact(createEditor()), []);
+    const editor = useMemo(() => withReact(createSlateEditor()), []);
     const [editorId, setEditorId] = useState(generateUuid());
     const ref = useRef(false);
     const refOperations = useRef<BaseOperation[]>([]);
     const {nodes, lastUpdated} = state;
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (lastUpdated !== editorId) {
@@ -127,12 +131,15 @@ const Rte = ({dispatch, state}: {
             refOperations.current.push(...editor.operations);
             flush();
         }}>
-            <OverlayToolbar/>
-            <Selections clientIds={clientIds} clientMap={clientMap} clientId={clientId}>
-                <ErrorBoundary onError={handleSelectionError} fallback={null}>
-                    <Editable onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={Leaf}/>
-                </ErrorBoundary>
-            </Selections>
+            <div ref={containerRef}>
+                <OverlayToolbar containerRef={containerRef}/>
+                <Selections clientIds={clientIds} clientMap={clientMap} clientId={clientId} containerRef={containerRef}>
+                    <ErrorBoundary onError={handleSelectionError} fallback={null}>
+                        <Editable onBlur={() => dispatch({type: 'select', selection: null})} renderLeaf={Leaf}
+                                  renderElement={Element}/>
+                    </ErrorBoundary>
+                </Selections>
+            </div>
         </Slate>
     );
 };
@@ -187,10 +194,11 @@ type SelectionsProps = {
     clientId?: string,
     clientIds: string[],
     clientMap: ClientMap<Selection>,
-    children: ReactNode
+    children: ReactNode,
+    containerRef: RefObject<HTMLDivElement>
 }
 
-function Selections({clientId, clientMap, clientIds, children}: SelectionsProps) {
+function Selections({clientId, clientMap, clientIds, children, containerRef}: SelectionsProps) {
     const ref = useRef<HTMLDivElement>(null);
     const parent = ref.current;
 
@@ -205,7 +213,7 @@ function Selections({clientId, clientMap, clientIds, children}: SelectionsProps)
                     }
 
                     return <ClientSelection clientId={id} key={id} selection={selection}
-                                            parent={parent.getBoundingClientRect()}/>
+                                            parent={parent.getBoundingClientRect()} containerRef={containerRef}/>
                 }) : null}
             </div>
         </div>
@@ -215,12 +223,13 @@ function Selections({clientId, clientMap, clientIds, children}: SelectionsProps)
 type ClientSelectionProps = {
     clientId: string
     parent: DOMRect,
-    selection: BaseRange
+    selection: BaseRange,
+    containerRef: RefObject<HTMLDivElement>
 }
 
-function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
+function ClientSelection({selection, parent, clientId, containerRef}: ClientSelectionProps) {
     const editor = useSlate();
-    const rects = getDomRects(editor, selection);
+    const rects = getDOMRects(editor, selection);
     const first = rects[0] ?? null;
     const isCollapsed = Range.isCollapsed(selection);
     const tooltipRef = useRef<HTMLDivElement>(null);
@@ -256,7 +265,7 @@ function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
 
     return (
         <>
-            <Overlay target={target} show={true} placement="top">
+            <Overlay target={target} show={true} placement="top" container={containerRef.current}>
                 {(props) => (
                     <Popover {...props}>
                         <Popover.Body>
@@ -297,7 +306,7 @@ function ClientSelection({selection, parent, clientId}: ClientSelectionProps) {
 
 type Format = keyof Omit<Text, 'text'>;
 
-const toggleMark = (editor: ReactEditor, format: Format) => {
+const toggleMark = (editor: Editor, format: Format) => {
     const isActive = isMarkActive(editor, format)
 
     if (isActive) {
@@ -307,7 +316,7 @@ const toggleMark = (editor: ReactEditor, format: Format) => {
     }
 }
 
-const isMarkActive = (editor: ReactEditor, format: Format) => {
+const isMarkActive = (editor: Editor, format: Format) => {
     const marks = Editor.marks(editor);
 
     if (!marks) {
@@ -318,19 +327,20 @@ const isMarkActive = (editor: ReactEditor, format: Format) => {
 }
 
 const Leaf = ({attributes, children, leaf}: RenderLeafProps) => {
-    if (leaf.bold) {
-        children = <strong>{children}</strong>
-    }
 
-    if (leaf.italic) {
-        children = <em>{children}</em>
-    }
-
-    if (leaf.underline) {
-        children = <u>{children}</u>
-    }
-
-    return <span {...attributes}>{children}</span>
+    return (
+        <span
+            {...attributes}
+            style={{
+                paddingLeft: leaf.text === '' ? 0.1 : undefined,
+                fontWeight: leaf.bold ? 'bold' : undefined,
+                textDecoration: leaf.underline ? 'underline' : undefined,
+                fontStyle: leaf.italic ? 'italic' : undefined,
+            }}
+        >
+      {children}
+    </span>
+    );
 }
 
 const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
@@ -349,48 +359,108 @@ const FormatButton = ({format, icon}: { format: Format, icon: IconProp }) => {
     )
 }
 
-const OverlayToolbar = React.memo(() => {
+const OverlayToolbar = React.memo(({containerRef}: { containerRef: RefObject<HTMLDivElement> }) => {
+    const editor = useSlate();
     const selection = useSlateSelection();
-    const editor = useSlateStatic();
     const focus = useFocused();
     const [target, setTarget] = useState<VirtualElement>();
 
-
     useLayoutEffect(() => {
         const timeout = setTimeout(() => {
-            const first = selection ? getDomRects(editor, selection)[0] : undefined;
-            if (!first || !selection || Range.isCollapsed(selection) || !focus) {
+            const first = editor.selection ? getDOMRects(editor, editor.selection)[0] : undefined;
+            if (!first || !editor.selection || !focus) {
                 setTarget(undefined);
                 return;
             }
-            setTarget({
-                getBoundingClientRect: () => first
+            setTarget(target => {
+                if (target && isDOMRectEqual(target.getBoundingClientRect(), first)) {
+                    return target;
+                }
+
+                return {
+                    getBoundingClientRect: () => first
+                }
             });
         }, 150);
 
         return () => clearTimeout(timeout);
     }, [focus, editor, selection]);
 
-    if (!target) {
-        return null;
-    }
+
+    return useMemo(() => {
+        if (!target) {
+            return null;
+        }
+
+        return (
+            <Overlay target={target} show={!!target}
+                     placement="top" container={containerRef.current}>
+                {(props) => (
+                    <Popover {...props} onClick={e => {
+                        console.log('wait');
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}>
+                        <Popover.Body>
+                            <ButtonToolbar>
+                                <ButtonGroup>
+                                    <FormatButton format="bold" icon={faBold}/>
+                                    <FormatButton format="italic" icon={faItalic}/>
+                                    <FormatButton format="underline" icon={faUnderline}/>
+                                    <InsertTagButton/>
+                                </ButtonGroup>
+                            </ButtonToolbar>
+                        </Popover.Body>
+                    </Popover>
+                )}
+            </Overlay>
+        );
+    }, [target])
+});
+
+
+const InlineChromiumBugfix = () => (
+    <span
+        contentEditable={false}
+        style={{
+            fontSize: 0
+        }}
+    >
+    {String.fromCodePoint(160) /* Non-breaking space */}
+  </span>
+)
+
+function InsertTagButton() {
+    const editor = useSlateStatic();
+    const [value, setValue] = useState('');
 
     return (
-        <Overlay target={target} show={!!target}
-                 placement="top">
-            {(props) => (
-                <Popover {...props}>
-                    <Popover.Body>
-                        <ButtonToolbar>
-                            <ButtonGroup>
-                                <FormatButton format="bold" icon={faBold}/>
-                                <FormatButton format="italic" icon={faItalic}/>
-                                <FormatButton format="underline" icon={faUnderline}/>
-                            </ButtonGroup>
-                        </ButtonToolbar>
-                    </Popover.Body>
-                </Popover>
-            )}
-        </Overlay>
+        <ButtonGroup>
+            <FormControl type="text" value={value} onChange={e => setValue(e.target.value)}/>
+            <Button onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.insertInsertTag(value ? value : 'tag')
+            }}><FontAwesomeIcon icon={faCommentDots}/></Button>
+        </ButtonGroup>
     );
-});
+}
+
+
+function Element({element, attributes, children}: RenderElementProps) {
+    switch (element.type) {
+        case 'insert-tag':
+            return (
+                <span  {...attributes} contentEditable={false}>
+                    <InlineChromiumBugfix/>
+                    {children}
+                    <Badge bg="secondary" contentEditable={false}>
+                    {element.insertTag}
+                    </Badge>
+                    <InlineChromiumBugfix/>
+                </span>
+            );
+        default:
+            return <p {...attributes}>{children}</p>
+    }
+}
