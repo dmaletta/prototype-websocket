@@ -1,6 +1,6 @@
-import {Dispatch, useEffect, useMemo, useRef, useState} from "react";
+import {Dispatch, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Editable, Slate, withReact,} from "slate-react";
-import {BaseOperation, Descendant, Editor, Operation, Selection, SelectionOperation} from "slate";
+import {BaseOperation, Descendant, Editor, Operation, Selection, SelectionOperation, Transforms} from "slate";
 import {generateUuid, useDebounce} from "../common-util";
 import {ErrorBoundary} from "react-error-boundary";
 import {createSlateEditor} from "../slate-app-shared";
@@ -51,7 +51,7 @@ export default function RichTextEditor({state, dispatch}: Props) {
         }
     }, [editor, editorId, lastUpdated, nodes, state]);
 
-    const flush = useDebounce(() => {
+    const flush = useCallback(() => {
         const selectionOperations: SelectionOperation[] = [];
         const mutationOperations: Exclude<BaseOperation, SelectionOperation>[] = [];
 
@@ -70,9 +70,12 @@ export default function RichTextEditor({state, dispatch}: Props) {
         if (selectionOperations.length || mutationOperations.length) {
             dispatch({type: '@rte/select', select: editor.selection})
         }
-    }, 150);
+    }, [dispatch, editor.selection, editorId]);
 
-    const handleSelectionError = (e: Error) => {
+
+    const flushDebounce = useDebounce(flush, 150);
+
+    const handleSelectionError = useCallback((e: Error) => {
         if (editor.selection && e.message.includes('Cannot resolve a DOM point from Slate point')) {
             dispatch({type: '@rte/select', select: null});
             setTimeout(() => {
@@ -81,7 +84,8 @@ export default function RichTextEditor({state, dispatch}: Props) {
         } else {
             throw e;
         }
-    };
+    }, [dispatch, editor.selection]);
+
     return (
         <Slate key={editorId} editor={editor} initialValue={state.nodes} onChange={() => {
             if (ref.current) {
@@ -89,10 +93,10 @@ export default function RichTextEditor({state, dispatch}: Props) {
                 return;
             }
             refOperations.current.push(...editor.operations);
-            flush();
+            flushDebounce();
         }}>
             <HtmlDivElementProvider onClickOutside={() => {
-                dispatch({type: '@rte/select', select: null});
+                Transforms.deselect(editor);
             }}>
                 <Toolbar/>
                 {state.remote ? state.remote.map(({client, selection}) => {
